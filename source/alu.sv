@@ -17,11 +17,11 @@ always_comb
 	  
        ALU_SLL:
 	 begin
-	    aluport.output_port = aluport.portA << aluport.portB;
+	    aluport.output_port = aluport.portA << aluport.portB[5:0];
 	 end
        ALU_SRL:
 	 begin
-	    aluport.output_port = aluport.portA >> aluport.portB;
+	    aluport.output_port = aluport.portA >> aluport.portB[5:0];
 	 end
        ALU_ADD:
 	 begin
