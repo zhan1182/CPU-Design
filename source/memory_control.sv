@@ -22,4 +22,11 @@ module memory_control (
   // number of cpus for cc
   parameter CPUS = 2;
 
+
+
+
+
+
+   
+
 endmodule
