@@ -18,11 +18,7 @@ interface cache_control_if;
   import cpu_types_pkg::*;
 
   // access with cpuid on each processor
-<<<<<<< HEAD
-  parameter CPUS = 1;
-=======
   parameter CPUS = 2;
->>>>>>> ead3a9929de2052b051e3b656820d0e2fd740ac8
   parameter CPUID = 0;
 
   // arbitration
