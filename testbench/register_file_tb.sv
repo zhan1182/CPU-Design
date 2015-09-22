@@ -15,7 +15,7 @@
 `timescale 1 ns / 1 ns
 
 module register_file_tb;
-
+   
    parameter PERIOD = 10;
    
    logic CLK = 0, nRST;
@@ -155,5 +155,4 @@ program test(
 	
      end
    
-
 endprogram
