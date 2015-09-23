@@ -14,7 +14,7 @@ module register_file
 
    word_t [31:0] register;
    
-   always_ff @ (posedge CLK, negedge nRST)
+   always_ff @ (negedge CLK, negedge nRST)
      begin :tagname   
 	if(1'b0 == nRST)
 	  begin

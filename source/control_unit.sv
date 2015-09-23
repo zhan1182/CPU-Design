@@ -21,12 +21,11 @@ module control_unit
 	cu_if.lui = 0;
 	cu_if.shamt_en = 0;
 	cu_if.ALUSrc = 0;
-	cu_if.PCSrc = 0;
+	cu_if.PCSrc = 0; // beq
 	cu_if.RegDest = 0;
 	cu_if.MemReg = 0;
 	// cu_if.RegWrite = 0;
 	cu_if.bne = 0;
-	// cu_if.go_through = 0;
 	// Write enable for the register file
 	cu_if.WEN = 1;	
 
@@ -38,6 +37,9 @@ module control_unit
 
 	// Initialize ALU code
 	cu_if.ALUcode = ALU_SLL;
+
+	// overflow flag
+	cu_if.overflow_flag = 0;
 	
 	
 	casez(instr.opcode)
@@ -67,7 +69,7 @@ module control_unit
 		 ADD:
 		   begin
 		      cu_if.ALUcode = ALU_ADD;
-		      cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+		      cu_if.overflow_flag = 1;
 		   end
 		 ADDU:
 		   begin
@@ -76,7 +78,7 @@ module control_unit
 		 SUB:
 		   begin
 		      cu_if.ALUcode = ALU_SUB;
-		      cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+		      cu_if.overflow_flag = 1;
 		   end
 		 SUBU:
 		   begin
@@ -126,7 +128,7 @@ module control_unit
 	       cu_if.PCSrc = 1;
 	       cu_if.ALUcode = ALU_SUB;
 	       // halt if overflow
-	       cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       cu_if.overflow_flag = 1;
 	       
 	       // use imm
 	       cu_if.shamt_en = 1;
@@ -145,7 +147,8 @@ module control_unit
 	       cu_if.PCSrc = 1;
 	       cu_if.ALUcode = ALU_SUB;
 	       // halt if overflow
-	       cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
 	       
 	       // use imm
 	       cu_if.shamt_en = 1;
@@ -165,7 +168,8 @@ module control_unit
 	       cu_if.RegDest = 1;  // Chose rt instead of rd
 	       cu_if.ALUcode = ALU_ADD;
 	       // insert halt if overflow happens
-	       cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
 	    end
 	  ADDIU:
 	    begin
@@ -230,7 +234,8 @@ module control_unit
 	       // alu calculates the addr for ram
 	       cu_if.ALUcode = ALU_ADD;
 	       // halt if overflow happens
-	       cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
 	       
 	       cu_if.RegDest = 1;
 	       // Choose the data from ram
@@ -270,7 +275,8 @@ module control_unit
 	       // alu calculates the addr for ram
 	       cu_if.ALUcode = ALU_ADD;
 	       // halt if overflow happens
-	       cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
 	       
 	       // cu_if.RegDest = 1;
 	       // Enable ram data write
