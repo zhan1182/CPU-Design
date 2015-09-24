@@ -1,30 +1,30 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- alu interface
- */
+
 
 `ifndef ALU_IF_VH
- `define ALU_IF_VH
+`define ALU_IF_VH
 
- `include "cpu_types_pkg.vh"
+// all types
+`include "cpu_types_pkg.vh"
 
 interface alu_if;
+   // import types
    import cpu_types_pkg::*;
-   aluop_t ALUOP;
-   word_t porta, portb, out;
    
-     logic overflow, zero, negative;
+   logic     negative, overflow, zero;
+   word_t    portA, portB, output_port;
+   aluop_t   aluop;
+   
+   
+  // alu ports
+  modport alu_port (
+    input   portA, portB, aluop,
+    output  negative, overflow, zero, output_port
+  );
+  // alu tb
+  modport alu_tb (
+    input   negative, overflow, zero, output_port,
+    output  portA, portB, aluop
+  );
+endinterface
 
-   //ports
-   modport aluif (
-		input porta, portb, ALUOP,
-		output negative, zero, overflow, out
-		);
-
-   modport alutb (
-		  output negative, zero, overflow, out,
-		  input porta, portb, ALUOP
-		  );
-   endinterface
-`endif //  `ifndef ALU_IF_VH
+`endif //ALU_IF_VH

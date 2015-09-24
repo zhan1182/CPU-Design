@@ -1,238 +1,312 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- 
- control unit source code
- */
-
-`include "cpu_types_pkg.vh"
 `include "control_unit_if.vh"
+`include "cpu_types_pkg.vh"
 
-module control_unit(
-		    control_unit_if.cu cuif
-		    );
+import cpu_types_pkg::*;
 
-   import cpu_types_pkg::*;
+module control_unit
+(
+ control_unit_if.cu cu_if
+);
 
-   always_comb begin
-      cuif.MemWR = 0;
-      cuif.MemtoReg = 0;
-      cuif.RegDst = 0;
-      cuif.Jal = 0;
-      cuif.J = 0;
-      cuif.ALUSrc = 0;
-      cuif.shamt = 0;
-      cuif.sign_ext = 0; //when?
-      cuif.RegWrite = 0;
-      cuif.JR = 0;
-      cuif.halt = 0;
-      cuif.bne = 0;
-      cuif.beq = 0;
-      cuif.zero_ext = 0;
-      cuif.Lui = 0;
-      cuif.dREN = 0;
-      cuif.dWEN = 0;
-      cuif.ALUOP = ALU_SLL;
-      
-      
-      
-      
-      case(cuif.instr[31:26])
-	RTYPE:begin
-	   cuif.RegDst = 1;
-	   cuif.RegWrite = 1;
-	   cuif.shamt = 1;
-	   
-	   case(cuif.instr[5:0])
-	     SLL:begin
-		cuif.ALUOP = ALU_SLL;
-		cuif.ALUSrc = 1; //do I need this?
-		cuif.zero_ext = 1;
-	     end
-	     SRL:begin
-		cuif.ALUOP = ALU_SRL;
-		cuif.ALUSrc = 1;
-		cuif.zero_ext = 1;
-		
-		
-	     end
-	     JR:begin
-		cuif.JR = 1;
-		
-	     end
-	     ADD:begin
-		// truth table
-		cuif.ALUOP = ALU_ADD;
-		
+   r_t instr;
+   assign instr = r_t'(cu_if.instruction);
+   
+   always_comb
+     begin
+	// Signals to datapath
+	cu_if.sign_ext = 0;	
+	cu_if.j = 0;
+	cu_if.jr = 0;
+	cu_if.jal = 0;
+	cu_if.lui = 0;
+	cu_if.shamt_en = 0;
+	cu_if.ALUSrc = 0;
+	cu_if.PCSrc = 0; // beq
+	cu_if.RegDest = 0;
+	cu_if.MemReg = 0;
+	// cu_if.RegWrite = 0;
+	cu_if.bne = 0;
+	// Write enable for the register file
+	cu_if.WEN = 1;	
 
-	     end
-	     ADDU:begin
-		cuif.ALUOP = ALU_ADD;
+	// Signals to requist unit
+	cu_if.halt = 0;
+	cu_if.iREN = 1;
+	cu_if.dREN = 0;
+	cu_if.dWEN = 0;
 
-	     end
-	     SUB:begin
-		// truth table
-		cuif.ALUOP = ALU_SUB;
-		
-	     end
-	     SUBU:begin
-		cuif.ALUOP = ALU_SUB;
+	// Initialize ALU code
+	cu_if.ALUcode = ALU_SLL;
 
-	     end
-	     AND:begin
-		cuif.ALUOP = ALU_AND;
-		
-
-	     end
-	     OR:begin
-		cuif.ALUOP = ALU_OR;
-		
-
-	     end
-	     XOR:begin
-		cuif.ALUOP = ALU_XOR;
-		
-
-	     end
-	     NOR:begin
-		cuif.ALUOP = ALU_NOR;
-		
-
-	     end
-	     SLT:begin
-		cuif.ALUOP = ALU_SLT;
-		
-
-	     end
-	     SLTU:begin
-		cuif.ALUOP = ALU_SLTU;
-		
-
-	     end
-	   endcase // case (cuif.instr[5:0])		
-	end // case: RTYPE
+	// overflow flag
+	cu_if.overflow_flag = 0;
 	
-	// jtype
-	J:begin
-	   cuif.J = 1;
-	end
-	JAL:begin
-	   cuif.Jal = 1;
-	   cuif.RegWrite = 1;
-	   
-	end
-	// itype
-	BEQ:begin
-	   cuif.ALUOP = ALU_SUB;
-	   cuif.beq = 1;
-	   
-	   
-	end
-	BNE:begin
-	   cuif.bne = 1;
-	   cuif.ALUOP = ALU_SUB;
-	   
-	end
-	ADDI:begin
-	   cuif.RegWrite = 1;
-	   cuif.ALUOP = ALU_ADD;
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	end
-	ADDIU:begin
-	   cuif.RegWrite = 1;
-	   cuif.ALUOP = ALU_ADD;
-	   
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	end
-	SLTI:begin
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	   cuif.ALUOP = ALU_SLT;
-	   //?
-	   cuif.RegWrite = 1;
-	   
-	end
-	SLTIU:begin
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	   cuif.ALUOP = ALU_SLT;
-	   //?
-	   cuif.RegWrite = 1;
-	   
-	end
-	ANDI:begin
-	   cuif.ALUOP = ALU_AND;
-	   cuif.zero_ext = 1;
-	   cuif.ALUSrc = 1;
-	   cuif.RegWrite = 1;
-	   
-	   
-	end
-	ORI:begin
-	   cuif.ALUSrc = 1;
-	   cuif.RegWrite = 1;
-	   cuif.ALUOP = ALU_OR;
-	   cuif.zero_ext = 1;
-	   
-	   
-	   
-	end
-	XORI:begin
-	   cuif.ALUOP = ALU_XOR;
-	   cuif.ALUSrc = 1;
-	   cuif.RegWrite = 1;
-	   cuif.zero_ext = 1;
-	   
+	
+	casez(instr.opcode)
+	  RTYPE:
+	    begin
+	       // Choose rdata 2 to feed into ALU porB
+	       cu_if.ALUSrc = 1;
+	       
+	       casez(instr.funct)
+		 SLL:
+		   begin
+		      cu_if.ALUcode = ALU_SLL;
+		      // Choose shamt to feed into ALU porB
+		      cu_if.ALUSrc = 0;
+		   end
+		 SRL:
+		   begin
+		      cu_if.ALUcode = ALU_SRL;
+		      // Choose shamt to feed into ALU porB
+		      cu_if.ALUSrc = 0;
+		   end
+		 JR:
+		   begin
+		      cu_if.WEN = 0;
+		      cu_if.jr = 1;
+		   end
+		 ADD:
+		   begin
+		      cu_if.ALUcode = ALU_ADD;
+		      cu_if.overflow_flag = 1;
+		   end
+		 ADDU:
+		   begin
+		      cu_if.ALUcode = ALU_ADD;
+		   end
+		 SUB:
+		   begin
+		      cu_if.ALUcode = ALU_SUB;
+		      cu_if.overflow_flag = 1;
+		   end
+		 SUBU:
+		   begin
+		      cu_if.ALUcode = ALU_SUB;
+		   end
+		 AND:
+		   begin
+		      cu_if.ALUcode = ALU_AND;
+		   end
+		 OR:
+		   begin
+		      cu_if.ALUcode = ALU_OR;
+		   end
+		 XOR:
+		   begin
+		      cu_if.ALUcode = ALU_XOR;
+		   end
+		 NOR:
+		   begin
+		      cu_if.ALUcode = ALU_NOR;
+		   end
+		 SLT:
+		   begin
+		      cu_if.ALUcode = ALU_SLT;
+		   end
+		 SLTU:
+		   begin
+		      cu_if.ALUcode = ALU_SLTU;
+		   end
+	       endcase // casez (instr.funct)
+	       
+	    end
+	  J:
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	       cu_if.j = 1;
+	    end
+	  JAL:
+	    begin
+	       cu_if.jal = 1;
+	    end
+	  BEQ:// sign ext
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	       cu_if.PCSrc = 1;
+	       cu_if.ALUcode = ALU_SUB;
+	       // halt if overflow
+	       cu_if.overflow_flag = 1;
+	       
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       // sign ext
+	       cu_if.sign_ext = 1;
 
-	   
-	end
-	LUI:begin
-	   cuif.Lui = 1;
-	   cuif.RegWrite = 1;
-	   cuif.ALUSrc = 1;
-	   cuif.ALUOP = ALU_ADD;
-	   
-	   
-	end
-	LW:begin
-	   cuif.MemtoReg = 1;
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	   cuif.RegWrite = 1;
-	   cuif.ALUOP = ALU_ADD;
-	   cuif.dREN = 1;
-	   
-	   
-	   
-	end
-	SW:begin
-	   cuif.MemWR = 1;
-	   cuif.ALUSrc = 1;
-	   cuif.sign_ext = 1;
-	   cuif.ALUOP = ALU_ADD;
-	   cuif.dWEN = 1;
-	   
-	   
+	       // use rdat2
+	       cu_if.ALUSrc = 1;
+	       
+	       
+	    end
+	  BNE:
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	       cu_if.PCSrc = 1;
+	       cu_if.ALUcode = ALU_SUB;
+	       // halt if overflow
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       // bne
+	       cu_if.bne = 1;
+	       // sign ext
+	       cu_if.sign_ext = 1;
 
-	end
-	HALT:begin
-	   cuif.halt = 1;
-	   
-	end
-      endcase // case (cuif.instr[31:26])
-      if (cuif.overf == 1)begin
-	 //halt behavior
-	 if (cuif.instr[31:26] == 0 && cuif.instr[5:0] != ADDU && cuif.instr[5:0] != SUBU)begin
-	    cuif.halt = 1;
-	    
-	 end
-	 if (cuif.instr[31:26] != ADDIU && cuif.instr[31:26] != SLTIU)begin
-	    cuif.halt = 1;
-	 end
-	 
-      end
-      
-   end
-endmodule // control_unit
+	       cu_if.ALUSrc = 1;
+	    end
+	  ADDI:
+	    begin
+	       // Sign ext
+	       cu_if.sign_ext = 1;
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       cu_if.RegDest = 1;  // Chose rt instead of rd
+	       cu_if.ALUcode = ALU_ADD;
+	       // insert halt if overflow happens
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	    end
+	  ADDIU:
+	    begin
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       cu_if.RegDest = 1;
+	       cu_if.ALUcode = ALU_ADD;
+	    end
+	  SLTI:
+	    begin
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       cu_if.RegDest = 1;
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       cu_if.ALUcode = ALU_SLT;
+	    end
+	  SLTIU:
+	    begin
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       cu_if.RegDest = 1;
+	       cu_if.shamt_en = 1;
+	       cu_if.ALUcode = ALU_SLT;// deleted U here
+	    end
+	  ANDI:
+	    begin
+	       // zero extension
+	       cu_if.RegDest = 1;
+	       cu_if.shamt_en = 1;
+	       cu_if.ALUcode = ALU_AND;
+	    end
+	  ORI:
+	    begin
+	       // zero ext
+	       cu_if.RegDest = 1;
+	       cu_if.shamt_en = 1;
+	       cu_if.ALUcode = ALU_OR;
+	    end
+	  XORI:
+	    begin
+	       // Zero extention
+	       cu_if.RegDest = 1;
+	       cu_if.shamt_en = 1;
+	       cu_if.ALUcode = ALU_XOR;
+	    end
+	  LUI:
+	    begin
+	       cu_if.lui = 1;
+	       // rt as destination
+	       cu_if.RegDest = 1;
+	       // cu_if.go_through = 1;
+	       cu_if.ALUcode = ALU_ADD;
+	       cu_if.shamt_en = 1;	       
+	    end
+	  LW:
+	    begin
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       // alu calculates the addr for ram
+	       cu_if.ALUcode = ALU_ADD;
+	       // halt if overflow happens
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       
+	       cu_if.RegDest = 1;
+	       // Choose the data from ram
+	       cu_if.MemReg = 1;
+	       // Use imm
+	       cu_if.shamt_en = 1;
+	       // Enable ram data read
+	       cu_if.dREN = 1;
+	       
+	    end
+	  LBU:// Not found
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  LHU:// Not found
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  SB:// Not found
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  SH:// Not found
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  SW:
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       // alu calculates the addr for ram
+	       cu_if.ALUcode = ALU_ADD;
+	       // halt if overflow happens
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       
+	       // cu_if.RegDest = 1;
+	       // Enable ram data write
+	       cu_if.dWEN = 1;
+	       // use imm
+	       cu_if.shamt_en = 1;
+	    end
+	  LL:// No need
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  SC:// No need
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	    end
+	  HALT:
+	    begin
+	       // disable register write enable
+	       cu_if.WEN = 0;
+	       cu_if.halt = 1;
+	    end
+	  
+	endcase // casez (instruction[31:26])
+	
+
+
+	
+     end // always_comb begin
+   
+   
+endmodule

@@ -20,53 +20,48 @@ module memory_control (
   import cpu_types_pkg::*;
 
   // number of cpus for cc
-  parameter CPUS = 1;
+  parameter CPUS = 2;
 
-   always_comb begin
-      ccif.iload = 0;
-      ccif.dload = 0;
-      ccif.ramstore = 0;
-      ccif.ramREN = 0;
-      ccif.ramWEN = 0;
-      ccif.ramaddr = 0;
-      
-      if (ccif.dWEN == 1)begin
-	 ccif.ramaddr = ccif.daddr;
-	 ccif.ramWEN = 1;
-	 ccif.ramREN = 0;
-	 ccif.ramstore = ccif.dstore;
+   
+   assign ccif.ramWEN = ccif.dWEN[0];
+   assign ccif.ramREN = (ccif.dREN[0] | ccif.iREN[0]) & (~ccif.dWEN[0]);
+   assign ccif.ramaddr = (ccif.dWEN[0] | ccif.dREN[0]) ? ccif.daddr[0]:ccif.iaddr[0];
+   
 
-      end
-      else if (ccif.dREN == 1)begin
-	 ccif.dload = ccif.ramload;
-	 ccif.ramaddr = ccif.daddr;
-	 ccif.ramREN = 1;
-	 ccif.ramWEN = 0;
-      end
-      else if (ccif.iREN == 1)begin
-	 ccif.iload = ccif.ramload;
-	 ccif.ramaddr = ccif.iaddr;
-	 ccif.ramREN = 1;
-	 ccif.ramWEN = 0;
-      end
-      
-      case(ccif.ramstate)
-	FREE:begin
-	   ccif.iwait = 1;
-	   ccif.dwait = 1;
-	end
-	BUSY:begin
-	   ccif.iwait = 1;
-	   ccif.dwait = 1;
-	end
-	ACCESS:begin
-	   ccif.iwait = (ccif.iREN == 1 && ccif.dREN == 0 && ccif.dWEN == 0) ? 0 : 1;
-	   ccif.dwait = (ccif.dREN == 1 || ccif.dWEN == 1) ? 0:1;
-	end
-	ERROR:begin
-	   ccif.iwait = 1;
-	   ccif.dwait = 1;
-	end
-	endcase
-      end // always_comb begin
+   assign ccif.ramstore = ccif.dstore[0];
+   assign ccif.dload[0] = ccif.ramload;
+   assign ccif.iload[0] = ccif.ramload;
+   
+   always_comb
+     begin
+   	ccif.dwait[0] = 1;
+   	ccif.iwait[0] = 1;
+	
+   	casez(ccif.ramstate)
+
+   	  FREE:
+   	    begin
+   	    end
+   	  BUSY:
+   	    begin
+   	    end
+   	  ACCESS:
+   	    begin
+   	       if(ccif.dWEN[0] | ccif.dREN[0])
+   		 begin
+   		    ccif.dwait[0] = 0;
+   		 end
+   	       else
+   		 begin
+   		    ccif.iwait[0] = 0;
+   		 end
+   	    end // case: ACCESS
+   	  ERROR:
+   	    begin
+   	    end
+	  
+   	endcase // case (ccif.ramstate)
+	
+     end // always_comb
+   
 endmodule

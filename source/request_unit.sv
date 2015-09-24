@@ -1,50 +1,38 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- 
- Request Unit source code
- */
 
-`include "cpu_types_pkg.vh"
 `include "request_unit_if.vh"
+`include "cpu_types_pkg.vh"
 
-module request_unit(
-		    input logic CLK,
-		    input logic nRST,
-		    request_unit_if.ru ruif
-		    );
-   import cpu_types_pkg::*;
+import cpu_types_pkg::*;
 
-   logic 			dRENnext, dRENcurr, dWENnext, dWENcurr;
+module request_unit
+(
+ input logic CLK,
+ input logic nRST,
+ request_unit_if.ru ru_if
+);
 
-   assign ruif.imemREN = 1;
-   assign ruif.dmemREN = dRENcurr;
-   assign ruif.dmemWEN = dWENcurr;
+   logic     dREN_tmp;
+   logic     dWEN_tmp;
    
-   always_ff @(posedge CLK, negedge nRST) begin
-      if (nRST == 0)begin
-	 dRENcurr <= 0;
-	 dWENcurr <= 0;
+   
+   always_ff @ (posedge CLK, negedge nRST)
+     begin
+	if(nRST == 1'b0)
+	  begin
+	     ru_if.dmemREN <= 0;
+	     ru_if.dmemWEN <= 0;	     
+	  end
+	else
+	  begin
+	     ru_if.dmemREN <= dREN_tmp;
+	     ru_if.dmemWEN <= dWEN_tmp;	     
+	  end
+     end
 
-      end
-      else begin
-	 dRENcurr <= dRENnext;
-	 dWENcurr <= dWENnext;
-      end
-      
-   end
-   always_comb begin
-      dRENnext = dRENcurr;
-      dWENnext = dWENcurr;
-      
-      if(ruif.dhit == 1)begin
-	 dRENnext = 0;
-	 dWENnext = 0;
-      end
-      else if (ruif.ihit == 1) begin
-	 dRENnext = ruif.dREN;
-	 dWENnext = ruif.dWEN;
-      end
-   end
+   assign dREN_tmp = (~ru_if.dhit) & ru_if.dREN;
+   assign dWEN_tmp = (~ru_if.dhit) & ru_if.dWEN;
 
-endmodule // request_unit
+   assign ru_if.imemREN = 1;
+   
+   
+endmodule

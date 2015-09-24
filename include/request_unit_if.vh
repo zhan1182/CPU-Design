@@ -1,32 +1,38 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- 
- Request Unit Interface
- */
-`ifndef REQUEST_UNIT_IF_VH
- `define REQUEST_UNIT_IF_VH
 
- `include "cpu_types_pkg.vh"
+`ifndef REQUEST_UNIT_IF_VH
+`define REQUEST_UNIT_IF_VH
+
+// all types
+`include "cpu_types_pkg.vh"
 
 interface request_unit_if;
+   // import types
    import cpu_types_pkg::*;
 
-   logic ihit, dhit, imemREN, dmemREN, dmemWEN, dREN, dWEN;
+   logic iREN;
+   logic dREN;
+   logic dWEN;      
+   // logic halt;
    
-   
-   
+   // logic PC_en;
+   logic imemREN;
+   logic dmemREN;
+   logic dmemWEN;
 
+   // logic ihit;
+   logic dhit;   
+   
+   // request unit ports
    modport ru (
-	       input ihit, dhit, dREN, dWEN,
-	       output imemREN, dmemREN, dmemWEN
-	       );
+	      input  iREN, dREN, dWEN, dhit,
+	      output imemREN, dmemREN, dmemWEN
+	      );
+   // request unit tb
+   modport rutb (
+		 input  imemREN, dmemREN, dmemWEN,
+		 output iREN, dREN, dWEN, dhit
+		 );
+endinterface
 
-   modport tb (
-	       input imemREN, dmemREN, dmemWEN,
-	       output ihit, dhit, dREN, dWEN
-	       );
-
-endinterface // request_unit_if
 `endif //  `ifndef REQUEST_UNIT_IF_VH
 

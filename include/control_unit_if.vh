@@ -1,44 +1,52 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- 
- control unit interface
- */
-
 `ifndef CONTROL_UNIT_IF_VH
 `define CONTROL_UNIT_IF_VH
 
-// types
+// all types
 `include "cpu_types_pkg.vh"
 
 interface control_unit_if;
+   // import types
    import cpu_types_pkg::*;
-   word_t instr;
-   logic dREN, dWEN, JR, halt, bne, beq, zero_ext, Lui, RegWrite, MemWR, MemtoReg, RegDst, Jal, J, ALUSrc, shamt, sign_ext;
-   aluop_t ALUOP;
+
+   logic iREN;
+   logic dREN;
+   logic dWEN;
+   logic halt;
    
-   logic overf;
+   logic sign_ext;
+   logic j;
+   logic jr;
+   logic jal;
+   logic lui;
+   logic shamt_en;
+   logic ALUSrc;
+   logic PCSrc;
+   logic RegDest;
+   logic MemReg;
+   // logic RegWrite;
+   logic bne;
    
+   logic WEN;
+   // logic go_through;
 
-   // control_unit port
-   modport cu (
-	       input instr, overf,
-	       output dREN, dWEN, JR, halt, bne, beq, zero_ext, Lui, ALUOP, RegWrite, MemWR, MemtoReg, RegDst, Jal, J, ALUSrc, shamt, sign_ext
-
-	       );
+   // overflow flag 
+   logic overflow_flag;
    
-
+   aluop_t ALUcode;
    
-   // testbench port
-   modport tb (
-	       input dREN, dWEN, JR, halt, bne, beq, zero_ext, Lui, ALUOP, RegWrite, MemWR, MemtoReg, RegDst, Jal, J, ALUSrc, shamt, sign_ext,
-	       output instr, overf
-	       );
+   word_t instruction;
    
+   
+  // control unit ports
+  modport cu (
+	      input  instruction,
+	      output halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag
+  );
+  // control unit tb
+  modport cutb (
+  		input  halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag,
+		output instruction
+  );
+endinterface
 
-
-
-
-endinterface // control_unit_if
-
-`endif //  `ifndef CONTROL_UNIT_IF_VH
+`endif //CONTROL_UNIT_IF_VH

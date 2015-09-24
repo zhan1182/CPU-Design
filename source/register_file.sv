@@ -1,40 +1,37 @@
-/*
- Zhaoyang Han
- han221@purdue.edu
- 
- Lab1 register file
-*/
+
 
 `include "register_file_if.vh"
 `include "cpu_types_pkg.vh"
 
-module register_file(
-		     input logic 	 CLK,
-		     input logic 	 nRST,
-		     register_file_if.rf rfif
-	     		     );
+import cpu_types_pkg::*;
 
-   import cpu_types_pkg::*;
-   
-   word_t [31:0] 			 curr_wdat;
+module register_file
+(
+ input logic CLK,
+ input logic nRST,
+ register_file_if.rf rf_if
+);
 
+   word_t [31:0] register;
    
-
-   always_ff @ (posedge CLK, negedge nRST) begin
-      if(!nRST)begin
-	 curr_wdat <= 0;
-      end
-      else begin
-	 if(rfif.WEN == 1'b1)begin
-	    curr_wdat[rfif.wsel] <= rfif.wdat;
-	 end
-	 
-	 curr_wdat[0] <= 0;	 
-      end
-   end
-
+   always_ff @ (negedge CLK, negedge nRST)
+     begin :tagname   
+	if(1'b0 == nRST)
+	  begin
+	     register <= '{default:0}; 
+	  end
+	else
+	  begin
+	     register[0] <= 0;
+	     if(rf_if.WEN == 1'b1 && rf_if.wsel != 0)
+	       begin
+		  register[rf_if.wsel] <= rf_if.wdat;
+	       end
+	  end
+     end
    
-   assign rfif.rdat1 = curr_wdat[rfif.rsel1];
-   assign rfif.rdat2 = curr_wdat[rfif.rsel2];
+   assign rf_if.rdat1 = register[rf_if.rsel1];
+   assign rf_if.rdat2 = register[rf_if.rsel2];
    
-endmodule // 
+   
+endmodule

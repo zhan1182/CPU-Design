@@ -8,10 +8,11 @@
 
 // data path interface
 `include "datapath_cache_if.vh"
-`include "register_file_if.vh"
 `include "control_unit_if.vh"
-`include "request_unit_if.vh"
+`include "register_file_if.vh"
 `include "alu_if.vh"
+`include "pipeline_reg_if.vh"
+
 // alu op, mips op, and instruction type
 `include "cpu_types_pkg.vh"
 
@@ -19,146 +20,257 @@ module datapath (
   input logic CLK, nRST,
   datapath_cache_if.dp dpif
 );
-  // import types
-  import cpu_types_pkg::*;
+   // import types
+   import cpu_types_pkg::*;
+   
+   // pc init
+   parameter PC_INIT = 0;
 
-  // pc init
-  parameter PC_INIT = 0;
+   // PC counter tmp
+   word_t pc, next_pc;
+   word_t pc_4;
+   word_t pc_imm;
+   
+   // branch tmp
+   word_t imm_tmp_shift2;
+   logic      branch_eq, branch_go;
+   
+   
+   // Halt tmp
+   // logic      halt, next_halt;
 
-   // interfaces
-   register_file_if rfif ();
-   alu_if aluif ();
-   control_unit_if cuif();
-   request_unit_if ruif();
-
-   //maps
-   register_file RF (CLK, nRST, rfif);
-   alu ALU (aluif);
-   control_unit CU (cuif);
-   request_unit RU (CLK, nRST, ruif);
-
-   
-   
-   // PC
-   word_t pc_wait, pc_curr, pc_next;
-   word_t pc_out, pc_jjal, pc_out4, pc_outbranch, pc_iextnshft;
-   
-   
-   assign pc_jjal = {pc_out4[31:28], dpif.imemload[25:0], 2'b00};
-   
-   assign pc_wait = pc_curr;
-   assign pc_iextnshft = (dpif.imemload[15] == 1 ? {16'b1, dpif.imemload[15:0]}:{16'b0, dpif.imemload[15:0]}) << 2;
-   
-   
-   always_ff @ (posedge CLK, negedge nRST) begin
+   // overflow signal
+   logic      overflow;   
       
-      if (nRST == 0) begin
-	 pc_curr <= 0;
-      end
-      else if (dpif.ihit == 1 && dpif.dhit == 0) begin
-	 pc_curr <= pc_next;
-      end
-      else begin
-	 pc_curr <= pc_wait;
-      end
-      
-   end
-   always_comb begin
-      pc_out4 = pc_curr + 4;
-      pc_outbranch = pc_out4 + pc_iextnshft;
-      // the branch or + 4 block
-      if (cuif.bne == 1 && aluif.zero != 1) begin
-	 pc_out = pc_outbranch;
-      end
-      else if(cuif.beq == 1 && aluif.zero == 1)begin
-	 pc_out = pc_outbranch;
-      end
-      else begin
-	 pc_out = pc_out4;
-      end
-      // the 3 way mux
-      if (cuif.J == 1 || cuif.Jal == 1) begin
-	 pc_next = pc_jjal;
-      end
-      else if (cuif.JR == 1)begin
-	 pc_next = rfif.rdat1;
-      end
-      else begin
-	 pc_next = pc_out;
-      end
-   end
-   ////// where does the pc_curr go?????
+   // Register file wsel tmp
+   logic [4:0] wsel_tmp;
 
+   // Extention tmp
+   logic [15:0] unext_tmp;
+   word_t signext_tmp;
+   word_t zeroext_tmp;
+   word_t ext_tmp;
+   word_t imm_tmp;
 
-   // register file
-   assign rfif.rsel1 = dpif.imemload[25:21];
-   assign rfif.rsel2 = dpif.imemload[20:16];
-   assign rfif.WEN = cuif.RegWrite;
-   assign rfif.wsel = cuif.Jal == 1 ? 5'd31 : (cuif.RegDst == 1 ? dpif.imemload[15:11] : dpif.imemload[20:16]);
-   assign rfif.wdat = cuif.Jal == 1 ? pc_out4 : (cuif.MemtoReg == 1 ? dpif.dmemload : aluif.out);
-
-   // alu
-   // shift amount
-   word_t shiftAmount;
-   always_comb begin
-      // the extend block logic
-      if (cuif.sign_ext == 1)begin
-	 if (cuif.shamt == 1)begin
-	    shiftAmount = dpif.imemload[10] == 1 ? {27'h7FFFFFF, dpif.imemload[10:6]} : {27'b0, dpif.imemload[10:6]};
-	 end
-	 else begin
-	    shiftAmount = dpif.imemload[15] == 1 ? {16'hFFFF, dpif.imemload[15:0]} : {16'b0, dpif.imemload[15:0]};
-	 end
-      end
-      else if (cuif.zero_ext == 1)begin
-	 if (cuif.shamt == 1)begin
-	    shiftAmount = {27'b0, dpif.imemload[10:6]};
-	 end
-	 else begin
-	    shiftAmount = {16'b0, dpif.imemload[15:0]};
-	 end
-      end
-      else if (cuif.Lui == 1) begin
-	 shiftAmount = {dpif.imemload[15:0], 16'b0};
-      end
-      else begin
-	 shiftAmount = 0;
-      end
-   end
+   // register write data tmp
+   word_t wdat_tmp;
    
-   assign aluif.porta = cuif.Lui == 1 ? 0 : rfif.rdat1;
-   assign aluif.portb = cuif.ALUSrc == 1 ? shiftAmount : rfif.rdat2;
-   assign aluif.ALUOP = cuif.ALUOP;
-
-   // control unit
-   assign cuif.instr = dpif.imemload;
-   assign cuif.overf = aluif.overflow;
-
-   // request unit
-   assign ruif.ihit = dpif.ihit;
-   assign ruif.dhit = dpif.dhit;
-   assign ruif.dREN = cuif.dREN;
-   assign ruif.dWEN = cuif.dWEN;
-
-   // datapath
-   logic halt_next, halt_curr;
-   assign halt_next = cuif.halt;
-   always_ff @ (posedge CLK, negedge nRST) begin
-      if(nRST == 0)begin
-	 halt_curr <= 0;
-      end
-      else begin
-	 halt_curr <= halt_next;
-      end
-   end
    
-   assign dpif.imemREN = ruif.imemREN;
-   assign dpif.dmemREN = ruif.dmemREN;
-   assign dpif.dmemWEN = ruif.dmemWEN;
-   assign dpif.halt = halt_curr;
-   assign dpif.dmemstore = rfif.rdat2;
-   assign dpif.dmemaddr = aluif.out;
-   assign dpif.imemaddr = pc_curr;
+   // Load interface
+   control_unit_if cu_if();
+   alu_if alu_if();
+   register_file_if rf_if();
+   pipeline_reg_if pr_if();
+   
+   
+   // Connect modules
+   control_unit CU(cu_if);
+   alu ALU(alu_if);
+   register_file RF(CLK, nRST, rf_if);   
+   // Add pipeline reg module here
+   pipeline_reg PR(CLK, nRST, pr_if);
+   
+
+   /***************************************************************************/
+   // Assign datapath instruction read enable to 1
+   assign dpif.imemREN = cu_if.iREN;
+   
+   
+   /***************************************************************************/
+
+   assign pr_if.dhit = dpif.dhit; // added dhit
+   
+   
+   // Connect stage 1, fetch
+   // Intruction from cache (dpif.imemload)
+   assign pr_if.instr_in_1 = dpif.imemload;
+   assign pr_if.pc_4_in_1 = pc_4;
+
+
+   /***************************************************************************/
+   
+   // Connect stage 2, Decode
+   // Connect control unit input signals
+   assign cu_if.instruction = pr_if.instr_out_1;
+   assign pr_if.RegWrite_in_2 = cu_if.WEN;
+   assign pr_if.dWEN_in_2 = cu_if.dWEN;
+   assign pr_if.dREN_in_2 = cu_if.dREN;
+   assign pr_if.halt_in_2 = cu_if.halt;
+   assign pr_if.overflow_flag_in_2 = cu_if.overflow_flag;
+   assign pr_if.Lui_in_2 = cu_if.lui;
+   assign pr_if.jal_in_2 = cu_if.jal;
+   assign pr_if.j_in_2 = cu_if.j;
+   assign pr_if.JR_in_2 = cu_if.jr;
+   assign pr_if.bne_in_2 = cu_if.bne;
+   assign pr_if.sign_ext_in_2 = cu_if.sign_ext;
+   assign pr_if.shamt_flag_in_2 = cu_if.shamt_en;
+   assign pr_if.ALUSrc_in_2 = cu_if.ALUSrc;
+   assign pr_if.beq_in_2 = cu_if.PCSrc;
+   assign pr_if.RegDst_in_2 = cu_if.RegDest;
+   assign pr_if.ALUOP_in_2 = cu_if.ALUcode;
+   assign pr_if.MemtoReg_in_2 = cu_if.MemReg;
+   
+   // Conncet register file
+   assign rf_if.rsel1 = pr_if.instr_out_1[25:21];
+   assign rf_if.rsel2 = pr_if.instr_out_1[20:16];
+   assign pr_if.rdat1_in_2 = rf_if.rdat1;
+   assign pr_if.rdat2_in_2 = rf_if.rdat2;
+   assign pr_if.JRaddr_in_2 = rf_if.rdat1;
+   // Going through signals
+   assign pr_if.rt_in_2 = pr_if.instr_out_1[20:16];
+   assign pr_if.rd_in_2 = pr_if.instr_out_1[15:11];
+   assign pr_if.imm_in_2 = pr_if.instr_out_1[15:0];
+   assign pr_if.shamt_in_2 = pr_if.instr_out_1[10:6];
+   assign pr_if.pc_4_in_2 = pr_if.pc_4_out_1; // Not added yet
+   
+   // assign cu_if.overflow = alu_if.overflow; // Need to change control unit module
+   // assign rf_if.WEN = cu_if.WEN; // Change
+   // assign rf_if.wsel = (cu_if.jal == 1) ? 5'b11111 : wsel_tmp; // Change
+   // assign wsel_tmp = (cu_if.RegDest == 1) ? instr[20:16]:instr[15:11]; // Move the stage 2
+
+
+   /***************************************************************************/
+   
+   // Connect stage 3, Execute
+   assign alu_if.portA = (pr_if.Lui_out_2 == 1) ? 32'h00000000:pr_if.rdat1_out_2;
+   assign alu_if.portB = (pr_if.ALUSrc_out_2 == 1) ? pr_if.rdat2_out_2 : imm_tmp;
+   assign alu_if.aluop = aluop_t'(pr_if.ALUOP_out_2);
+
+   // Calculate zero/sign extension
+   assign unext_tmp = (pr_if.shamt_flag_out_2 == 1) ? pr_if.imm_out_2:{11'b0, pr_if.shamt_out_2}; //used shamt, should use shamt_flag
+   assign signext_tmp = (unext_tmp[15] == 1) ? {16'hffff, unext_tmp}:{16'h0000, unext_tmp};
+   assign zeroext_tmp = {16'h0000, unext_tmp};
+   assign ext_tmp = (pr_if.sign_ext_out_2 == 1) ? signext_tmp:zeroext_tmp;
+   assign imm_tmp = (pr_if.Lui_out_2 == 1) ? {unext_tmp, 16'h0000}: ext_tmp;
+
+   // Calculate register wsel
+   assign wsel_tmp = (pr_if.RegDst_out_2 == 1) ? pr_if.rt_out_2: pr_if.rd_out_2;
+   assign pr_if.wsel_in_3 = (pr_if.jal_out_2 == 1) ? 5'b11111 : wsel_tmp;
+
+   // Calculate branch addr
+   assign imm_tmp_shift2 = imm_tmp << 2;
+   assign pc_imm = pr_if.pc_4_out_2 + imm_tmp_shift2;
+   assign pr_if.pc_imm_in_3 = pc_imm;
+   
+   // Connect alu output
+   assign pr_if.zero_in_3 = alu_if.zero;
+   assign pr_if.ALUout_in_3 = alu_if.output_port;
+   assign pr_if.dmemstore_in_3 = pr_if.rdat2_out_2;
+
+   // Determine overflow logic
+   assign overflow = pr_if.overflow_flag_out_2 & alu_if.overflow;
+   assign pr_if.halt_or_in_3 = overflow | pr_if.halt_out_2;   
+   
+   // Connect going through signals
+   assign pr_if.RegWrite_in_3 = pr_if.RegWrite_out_2;
+   assign pr_if.dWEN_in_3 = pr_if.dWEN_out_2;
+   assign pr_if.dREN_in_3 = pr_if.dREN_out_2;
+   assign pr_if.jal_in_3 = pr_if.jal_out_2;
+   assign pr_if.bne_in_3 = pr_if.bne_out_2;
+   assign pr_if.beq_in_3 = pr_if.beq_out_2;
+   assign pr_if.MemtoReg_in_3 = pr_if.MemtoReg_out_2;
+   assign pr_if.pc_4_in_3 = pr_if.pc_4_out_2;
+
+   /***************************************************************************/
+
+   // Connect stage 4, MEM
+   // Connect interface with datapath output (TO/FROM RAM)
+   // Write to ram
+   assign dpif.dmemaddr = pr_if.ALUout_out_3;
+   assign dpif.dmemstore = pr_if.dmemstore_out_3;
+   // Read from ram
+   assign pr_if.dmemload_in_4 = dpif.dmemload;
+   // Send out ram enables
+   assign dpif.dmemREN = pr_if.dREN_out_3;
+   assign dpif.dmemWEN = pr_if.dWEN_out_3;
+
+   // Determine branch
+   assign branch_eq = pr_if.zero_out_3 & pr_if.beq_out_3;
+   assign branch_go = (pr_if.bne_out_3) ? (~branch_eq) : branch_eq;
+   // assign pr_if.pc_4_branch_in_4 = (branch_go) ? pr_if.pc_imm_out_3 : pr_if.pc_4_out_3;
+   
+
+   // Connect going through signals
+   assign pr_if.RegWrite_in_4 = pr_if.RegWrite_out_3;
+   assign pr_if.halt_or_in_4 = pr_if.halt_or_out_3;
+   assign pr_if.jal_in_4 = pr_if.jal_out_3;
+   assign pr_if.MemtoReg_in_4 = pr_if.MemtoReg_out_3;
+   assign pr_if.pc_4_in_4 = pr_if.pc_4_out_3;
+   assign pr_if.ALUout_in_4 = pr_if.ALUout_out_3;
+   assign pr_if.wsel_in_4 = pr_if.wsel_out_3;
+   
+
+   /***************************************************************************/
+
+   // Connect stage 5, Write Back
+
+   // Connect Halt signal out from datapath to cache
+   assign dpif.halt = pr_if.halt_or_out_4;
+   
+   // Connect write back signals
+   assign rf_if.WEN = pr_if.RegWrite_out_4;
+   assign rf_if.wsel = pr_if.wsel_out_4;
+
+   // Calculate the write back data
+   assign wdat_tmp = (pr_if.MemtoReg_out_4) ? pr_if.dmemload_out_4 : pr_if.ALUout_out_4;
+   assign rf_if.wdat = (pr_if.jal_out_4) ? pr_if.pc_4_out_4 : wdat_tmp;
+
+   // Connect instruction addr
+   assign dpif.imemaddr = pc;
+   
+   // PC counter
+   always_ff @ (posedge CLK, negedge nRST)
+     begin
+	if(nRST == 1'b0)
+	  begin
+	     pc <= PC_INIT;	     
+	  end
+	else
+	  begin
+	     if(dpif.ihit == 1'b1 && dpif.dhit == 1'b0)
+	       begin
+		  pc <= next_pc;
+	       end
+	  end
+     end
+   
+
+   // Calculate next pc position
+   assign pc_4 = pc + 4;
+   assign next_pc = pc_4;
+   
+   // assign pc_j = {pc_4[31:28], instr[25:0], 2'b00};
+   // assign pc_jr = rf_if.rdat1;
+   
+   // assign pc_4_branch = (branch_go) ? pc_imm : pc_4;
+   // // assign next_pc = (cu_if.jr & (~cu_if.j) ) ? pc_jr : (cu_if.j | cu_if.jal) ? pc_j : pc_4_branch;//add ~j
+   // always_comb
+   //   begin
+   // 	next_pc = pc_4_branch;
+   // 	if(cu_if.jr)
+   // 	  begin
+   // 	     next_pc = pc_jr;
+   // 	  end
+   // 	else if(cu_if.j | cu_if.jal)
+   // 	  begin
+   // 	     next_pc = pc_j;
+   // 	  end
+   //   end
+   
+   
+   // always_ff @ (posedge CLK, negedge nRST)
+   //   begin
+   // 	if(nRST == 1'b0)
+   // 	  begin
+   // 	     halt <= 1'b0;
+   // 	  end
+   // 	else
+   // 	  begin
+   // 	     halt = next_halt;
+   // 	  end
+   //   end
+
+   // assign next_halt = cu_if.halt;
    
    
 endmodule
