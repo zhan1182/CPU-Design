@@ -195,7 +195,7 @@ module control_unit
 	       cu_if.sign_ext = 1;
 	       cu_if.RegDest = 1;
 	       cu_if.shamt_en = 1;
-	       cu_if.ALUcode = ALU_SLT;// deleted U here
+	       cu_if.ALUcode = ALU_SLTU;// deleted U here
 	    end
 	  ANDI:
 	    begin
