@@ -16,6 +16,20 @@
 // alu op, mips op, and instruction type
 `include "cpu_types_pkg.vh"
 
+
+
+/////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
+`include "hazard_if.vh"
+
+
+
+
+
+
+
+
+
+
 module datapath (
   input logic CLK, nRST,
   datapath_cache_if.dp dpif
@@ -55,6 +69,15 @@ module datapath (
    // register write data tmp
    word_t wdat_tmp;
    
+
+
+   /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
+   logic [1:0] 	forwardA, forwardB;
+   word_t tempA, tempB; // for line 320
+   
+
+
+
    
    // Load interface
    control_unit_if cu_if();
@@ -62,6 +85,8 @@ module datapath (
    register_file_if rf_if();
    pipeline_reg_if pr_if();
    
+   /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
+   hazard_if hiif();
    
    // Connect modules
    control_unit CU(cu_if);
@@ -70,7 +95,13 @@ module datapath (
    // Add pipeline reg module here
    pipeline_reg PR(CLK, nRST, pr_if);
    
+   /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
 
+   hazard HI(hiif);
+   
+
+
+   
    /***************************************************************************/
    // Assign datapath instruction read enable to 1
    assign dpif.imemREN = cu_if.iREN;
@@ -132,8 +163,8 @@ module datapath (
    /***************************************************************************/
    
    // Connect stage 3, Execute
-   assign alu_if.portA = (pr_if.Lui_out_2 == 1) ? 32'h00000000:pr_if.rdat1_out_2;
-   assign alu_if.portB = (pr_if.ALUSrc_out_2 == 1) ? pr_if.rdat2_out_2 : imm_tmp;
+   //assign alu_if.portA = (pr_if.Lui_out_2 == 1) ? 32'h00000000:pr_if.rdat1_out_2;
+   //assign alu_if.portB = (pr_if.ALUSrc_out_2 == 1) ? pr_if.rdat2_out_2 : imm_tmp;
    assign alu_if.aluop = aluop_t'(pr_if.ALUOP_out_2);
 
    // Calculate zero/sign extension
@@ -272,5 +303,41 @@ module datapath (
 
    // assign next_halt = cu_if.halt;
    
+
+   /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
+   assign hiif.instr_out_1 = pr_if.instr_out_1;
+   assign hiif.wsel_out_3 = pr_if.wsel_out_3;
+   assign hiif.wsel_out_4 = pr_if.wsel_out_4;
+   assign hiif.RegWrite_out_3 = pr_if.RegWrite_out_3;
+   assign hiif.RegWrite_out_4 = pr_if.RegWrite_out_4;
+
+
+   assign forwardA = hiif.forwardA;
+   assign forwardB = hiif.forwardB;
+   
+   // line 165, 166 are commented, new code is here
+   assign alu_if.portA = (pr_if.Lui_out_2 == 1) ? 32'h00000000:tempA;
+   assign alu_if.portB = (pr_if.ALUSrc_out_2 == 1) ? tempB : imm_tmp; 
+
+   always_comb begin
+      tempA = pr_if.rdat1_out_2;
+      tempB = pr_if.rdat2_out_2;
+      
+      if (forwardA == 2'b01 ) begin
+	 tempA = rf_if.wdat;
+      end
+      if (forwardB == 2'b01) begin
+	 tempB = rf_if.wdat;
+      end
+      if(forwardA == 2'b10) begin
+	 tempA = pr_if.ALUout_out_3;
+      end
+      if(forwardB == 2'b10) begin
+	 tempB = pr_if.ALUout_out_3;
+      end
+      
+
+
+   end
    
 endmodule
