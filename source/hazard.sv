@@ -49,7 +49,7 @@ module hazard(
 
 
 
-
+   // potential adding: P311 MEM hazard, P314 hazard detection: load
 
 
 

@@ -347,5 +347,16 @@ module datapath (
    // Line 189 commented out
    assign pr_if.dmemstore_in_3 = (hiif.forwardC) ? pr_if.ALUout_out_3 : pr_if.rdat2_out_2;
    
+
+   // New added pipeline register signals here
+   assign pr_if.jumpAddr_in_2 = pr_if.instr_out_1[25:0];
+   assign pr_if.jumpAddr_in_3 = pr_if.jumpAddr_out_2;
+   assign pr_if.j_in_3 = pr_if.j_out_2;
+   assign pr_if.JR_in_3 = pr_if.JR_out_2;
+   assign pr_if.rdat1_in_3 = pr_if.rdat1_out_2;
+
+   word_t pc_final;
+   
+
    
 endmodule

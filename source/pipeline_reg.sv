@@ -22,6 +22,11 @@ module pipeline_reg(
 	 prif.JRaddr_out_2 <= 0;
 	 prif.rdat2_out_2 <= 0;
 	 prif.pc_4_out_2 <= 0;
+
+	 prif.jumpAddr_out_2 <= 0;
+	 prif.jumpAddr_out_3 <= 0;
+	 
+	 
 	 prif.rt_out_2 <= 0; //change in to out
 	 prif.rd_out_2 <= 0; //chnage in to out
 	 prif.rs_out_2 <= 0;
@@ -69,6 +74,11 @@ module pipeline_reg(
 	 prif.dmemload_out_4 <= 0;
 	 prif.ALUout_out_4 <= 0;
 	 prif.wsel_out_4 <= 0;
+
+	 prif.j_out_3 <= 0;
+	 prif.JR_out_3 <= 0;
+	 prif.rdat1_out_3 <= 0;
+	 
       end
    
       else begin
@@ -78,6 +88,11 @@ module pipeline_reg(
 	 prif.rdat2_out_2 <= prif.rdat2_in_2;
 	 prif.JRaddr_out_2 <= prif.JRaddr_in_2;
 	 prif.pc_4_out_2 <= prif.pc_4_in_2;
+
+	 // remember to assign instruction to jumpAddr_2
+	 prif.jumpAddr_out_2 <= prif.jumpAddr_in_2;
+	 prif.jumpAddr_out_3 <= prif.jumpAddr_in_3; 
+	 
 	 prif.rt_out_2 <= prif.rt_in_2;
 	 prif.rd_out_2 <= prif.rd_in_2;
 	 prif.rs_out_2 <= prif.rs_in_2;
@@ -127,6 +142,10 @@ module pipeline_reg(
 	 prif.dmemload_out_4 <= prif.dmemload_in_4;
 	 prif.ALUout_out_4 <= prif.ALUout_in_4;
 	 prif.wsel_out_4 <= prif.wsel_in_4;
+
+	 prif.j_out_3 <= prif.j_in_3;
+	 prif.JR_out_3 <= prif.JR_in_3;
+	 prif.rdat1_out_3 <= prif.rdat1_in_3;
       end // else: !if(nRST == 0)
       
       if (prif.dhit == 1) begin
