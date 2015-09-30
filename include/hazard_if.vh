@@ -20,6 +20,7 @@ interface hazard_if;
    word_t instr_out_1;
    regbits_t wsel_out_3, wsel_out_4;
    logic RegWrite_out_3, RegWrite_out_4;
+   logic dWEN_out_3;
    
 
 
@@ -27,6 +28,8 @@ interface hazard_if;
 
    // Outputs
    logic [1:0] forwardA, forwardB;
+   logic       forwardC;
+   
    
 
 
@@ -34,13 +37,13 @@ interface hazard_if;
 
    // ports
    modport hi (
-	       input instr_out_1, wsel_out_3, wsel_out_4, RegWrite_out_3, RegWrite_out_4,
-	       output forwardA, forwardB
+	       input instr_out_1, wsel_out_3, wsel_out_4, RegWrite_out_3, RegWrite_out_4, dWEN_out_3,
+	       output forwardA, forwardB, forwardC
 	       );
 
    modport tb (
-	       input forwardA, forwardB,
-	       output  instr_out_1, wsel_out_3, wsel_out_4, RegWrite_out_3, RegWrite_out_4
+	       input forwardA, forwardB, forwardC,
+	       output  instr_out_1, wsel_out_3, wsel_out_4, RegWrite_out_3, RegWrite_out_4, dWEN_out_3
 	       );
    
 

@@ -186,7 +186,7 @@ module datapath (
    // Connect alu output
    assign pr_if.zero_in_3 = alu_if.zero;
    assign pr_if.ALUout_in_3 = alu_if.output_port;
-   assign pr_if.dmemstore_in_3 = pr_if.rdat2_out_2;
+   // assign pr_if.dmemstore_in_3 = pr_if.rdat2_out_2; // Add a new mux here
 
    // Determine overflow logic
    assign overflow = pr_if.overflow_flag_out_2 & alu_if.overflow;
@@ -335,9 +335,11 @@ module datapath (
       if(forwardB == 2'b10) begin
 	 tempB = pr_if.ALUout_out_3;
       end
-      
+   end // always_comb
 
 
-   end
+   // Line 189 commented out
+   assign pr_if.dmemstore_in_3 = (hiif.forwardC) ? pr_if.ALUout_out_3 : pr_if.rdat2_out_2;
+   
    
 endmodule

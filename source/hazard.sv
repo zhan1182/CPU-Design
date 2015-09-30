@@ -21,7 +21,9 @@ module hazard(
    always_comb begin
       hiif.forwardA = 0;
       hiif.forwardB = 0;
-
+      hiif.forwardC = 0;
+      
+      
       // when 2nd line needs the result of 1st line
       if (hiif.RegWrite_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == rsel1) begin
 	 hiif.forwardA = 2'b10;
@@ -36,8 +38,13 @@ module hazard(
       if (hiif.RegWrite_out_4 && hiif.wsel_out_4 != 0 && hiif.wsel_out_4 == rsel2) begin
 	 hiif.forwardB = 2'b01;
       end
-      
 
+      if(hiif.dWEN_out_3 && hiif.wsel_out_3 == rsel2)
+	begin
+	   hiif.forwardC = 1;
+	end
+      
+      
    end // always_comb
    
    
