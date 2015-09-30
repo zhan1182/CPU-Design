@@ -150,6 +150,8 @@ module datapath (
    // Going through signals
    assign pr_if.rt_in_2 = pr_if.instr_out_1[20:16];
    assign pr_if.rd_in_2 = pr_if.instr_out_1[15:11];
+   assign pr_if.rs_in_2 = pr_if.instr_out_1[25:21];
+   
    assign pr_if.imm_in_2 = pr_if.instr_out_1[15:0];
    assign pr_if.shamt_in_2 = pr_if.instr_out_1[10:6];
    assign pr_if.pc_4_in_2 = pr_if.pc_4_out_1; // Not added yet
@@ -305,11 +307,15 @@ module datapath (
    
 
    /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
-   assign hiif.instr_out_1 = pr_if.instr_out_1;
+   //assign hiif.instr_out_1 = pr_if.instr_out_1;
    assign hiif.wsel_out_3 = pr_if.wsel_out_3;
    assign hiif.wsel_out_4 = pr_if.wsel_out_4;
    assign hiif.RegWrite_out_3 = pr_if.RegWrite_out_3;
    assign hiif.RegWrite_out_4 = pr_if.RegWrite_out_4;
+   assign hiif.rt_out_2 = pr_if.rt_out_2;
+   assign hiif.rs_out_2 = pr_if.rs_out_2;
+
+   assign hiif.dWEN_out_2 = pr_if.dWEN_out_2;
 
 
    assign forwardA = hiif.forwardA;

@@ -24,6 +24,8 @@ module pipeline_reg(
 	 prif.pc_4_out_2 <= 0;
 	 prif.rt_out_2 <= 0; //change in to out
 	 prif.rd_out_2 <= 0; //chnage in to out
+	 prif.rs_out_2 <= 0;
+	 
 	 prif.shamt_out_2 <= 0;
 	 prif.imm_out_2 <= 0;
 	 prif.RegWrite_out_2 <= 0;
@@ -78,6 +80,8 @@ module pipeline_reg(
 	 prif.pc_4_out_2 <= prif.pc_4_in_2;
 	 prif.rt_out_2 <= prif.rt_in_2;
 	 prif.rd_out_2 <= prif.rd_in_2;
+	 prif.rs_out_2 <= prif.rs_in_2;
+	 
 	 prif.shamt_out_2 <= prif.shamt_in_2;
 	 prif.imm_out_2 <= prif.imm_in_2;
 	 prif.RegWrite_out_2 <= prif.RegWrite_in_2;
