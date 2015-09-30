@@ -26,14 +26,14 @@ module hazard(
       if (hiif.RegWrite_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == rsel1) begin
 	 hiif.forwardA = 2'b10;
       end
-      else if (hiif.RegWrite_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == rsel2) begin
+      if (hiif.RegWrite_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == rsel2) begin
 	 hiif.forwardB = 2'b10;
       end
       // when 3rd line needs the result of 1st line
       if (hiif.RegWrite_out_4 && hiif.wsel_out_4 != 0 && hiif.wsel_out_4 == rsel1) begin
 	 hiif.forwardA = 2'b01;
       end
-      else if (hiif.RegWrite_out_4 && hiif.wsel_out_4 != 0 && hiif.wsel_out_4 == rsel2) begin
+      if (hiif.RegWrite_out_4 && hiif.wsel_out_4 != 0 && hiif.wsel_out_4 == rsel2) begin
 	 hiif.forwardB = 2'b01;
       end
       
