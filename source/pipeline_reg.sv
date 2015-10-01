@@ -24,7 +24,6 @@ module pipeline_reg(
 	 prif.pc_4_out_2 <= 0;
 
 	 prif.jumpAddr_out_2 <= 0;
-	 prif.jumpAddr_out_3 <= 0;
 	 
 	 
 	 prif.rt_out_2 <= 0; //change in to out
@@ -51,35 +50,9 @@ module pipeline_reg(
 	 prif.RegDst_out_2 <= 0;
 	 prif.ALUOP_out_2 <= ALU_SLL;
 	 prif.MemtoReg_out_2 <= 0;
-	 prif.RegWrite_out_3 <= 0;
-	 prif.dWEN_out_3 <= 0;
-	 prif.dREN_out_3 <= 0;
-	 prif.halt_or_out_3 <= 0;
-	 prif.jal_out_3 <= 0;
-	 prif.bne_out_3 <= 0;
-	 prif.beq_out_3 <= 0;
-	 prif.MemtoReg_out_3 <= 0;
-	 prif.zero_out_3 <= 0;
-	 prif.ALUout_out_3 <= 0;
-	 prif.dmemstore_out_3 <= 0;
-	 prif.pc_4_out_3 <= 0;
-	 prif.pc_imm_out_3 <= 0;
-	 prif.wsel_out_3 <= 0;
-	 prif.RegWrite_out_4 <= 0;
-	 prif.halt_or_out_4 <= 0;
-	 prif.jal_out_4 <= 0;
-	 prif.MemtoReg_out_4 <= 0;
-	 prif.pc_4_out_4 <= 0;
-	 // prif.pc_branch_out_4 <= 0;
-	 prif.dmemload_out_4 <= 0;
-	 prif.ALUout_out_4 <= 0;
-	 prif.wsel_out_4 <= 0;
 
-	 prif.j_out_3 <= 0;
-	 prif.JR_out_3 <= 0;
-	 prif.rdat1_out_3 <= 0;
 	 
-      end
+      end // if (nRST == 0)
       else if(prif.flush)
 	begin
 	   prif.instr_out_1 <= 0;
@@ -90,13 +63,12 @@ module pipeline_reg(
 	   prif.pc_4_out_2 <= 0;
 	   
 	   prif.jumpAddr_out_2 <= 0;
-	   prif.jumpAddr_out_3 <= 0;
 	   
 	   
 	   prif.rt_out_2 <= 0; //change in to out
 	   prif.rd_out_2 <= 0; //chnage in to out
 	   prif.rs_out_2 <= 0;
-	   
+	 
 	   prif.shamt_out_2 <= 0;
 	   prif.imm_out_2 <= 0;
 	   prif.RegWrite_out_2 <= 0;
@@ -117,8 +89,9 @@ module pipeline_reg(
 	   prif.RegDst_out_2 <= 0;
 	   prif.ALUOP_out_2 <= ALU_SLL;
 	   prif.MemtoReg_out_2 <= 0;
+	   
 	end
-      
+     
       else begin
 	 prif.instr_out_1 <= prif.instr_in_1;
 	 prif.pc_4_out_1 <= prif.pc_4_in_1;
@@ -128,8 +101,7 @@ module pipeline_reg(
 	 prif.pc_4_out_2 <= prif.pc_4_in_2;
 
 	 // remember to assign instruction to jumpAddr_2
-	 prif.jumpAddr_out_2 <= prif.jumpAddr_in_2;
-	 prif.jumpAddr_out_3 <= prif.jumpAddr_in_3; 
+	 prif.jumpAddr_out_2 <= prif.jumpAddr_in_2; 
 	 
 	 prif.rt_out_2 <= prif.rt_in_2;
 	 prif.rd_out_2 <= prif.rd_in_2;
@@ -155,35 +127,7 @@ module pipeline_reg(
 	 prif.RegDst_out_2 <= prif.RegDst_in_2;
 	 prif.ALUOP_out_2 <= prif.ALUOP_in_2;
 	 prif.MemtoReg_out_2 <= prif.MemtoReg_in_2;
-	 // third register
-	 prif.RegWrite_out_3 <= prif.RegWrite_in_3;
-	 prif.dWEN_out_3 <= prif.dWEN_in_3;
-	 prif.dREN_out_3 <= prif.dREN_in_3;
-	 prif.halt_or_out_3 <= prif.halt_or_in_3;
-	 prif.jal_out_3 <= prif.jal_in_3;
-	 prif.bne_out_3 <= prif.bne_in_3;
-	 prif.beq_out_3 <= prif.beq_in_3;
-	 prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
-	 prif.zero_out_3 <= prif.zero_in_3;
-	 prif.ALUout_out_3 <= prif.ALUout_in_3;
-	 prif.dmemstore_out_3 <= prif.dmemstore_in_3;
-	 prif.pc_4_out_3 <= prif.pc_4_in_3;
-	 prif.pc_imm_out_3 <= prif.pc_imm_in_3;
-	 prif.wsel_out_3 <= prif.wsel_in_3;
-	 // fourth register
-	 prif.RegWrite_out_4 <= prif.RegWrite_in_4;
-	 prif.halt_or_out_4 <= prif.halt_or_in_4;
-	 prif.jal_out_4 <= prif.jal_in_4;
-	 prif.MemtoReg_out_4 <= prif.MemtoReg_in_4;
-	 prif.pc_4_out_4 <= prif.pc_4_in_4;
-	 // prif.pc_branch_out_4 <= prif.pc_branch_in_4;
-	 prif.dmemload_out_4 <= prif.dmemload_in_4;
-	 prif.ALUout_out_4 <= prif.ALUout_in_4;
-	 prif.wsel_out_4 <= prif.wsel_in_4;
-
-	 prif.j_out_3 <= prif.j_in_3;
-	 prif.JR_out_3 <= prif.JR_in_3;
-	 prif.rdat1_out_3 <= prif.rdat1_in_3;
+	 
       end // else: !if(nRST == 0)
       
       if (prif.dhit == 1) begin
@@ -191,6 +135,77 @@ module pipeline_reg(
       end
      
    end // always_ff @ (posedge CLK, negedge nRST)
+
+
+   always_ff @ (posedge CLK, negedge nRST)
+     begin
+	if (nRST == 0) 
+	  begin
+	     prif.jumpAddr_out_3 <= 0;
+	     prif.RegWrite_out_3 <= 0;
+	     prif.dWEN_out_3 <= 0;
+	     prif.dREN_out_3 <= 0;
+	     prif.halt_or_out_3 <= 0;
+	     prif.jal_out_3 <= 0;
+	     prif.bne_out_3 <= 0;
+	     prif.beq_out_3 <= 0;
+	     prif.MemtoReg_out_3 <= 0;
+	     prif.zero_out_3 <= 0;
+	     prif.ALUout_out_3 <= 0;
+	     prif.dmemstore_out_3 <= 0;
+	     prif.pc_4_out_3 <= 0;
+	     prif.pc_imm_out_3 <= 0;
+	     prif.wsel_out_3 <= 0;
+	     prif.RegWrite_out_4 <= 0;
+	     prif.halt_or_out_4 <= 0;
+	     prif.jal_out_4 <= 0;
+	     prif.MemtoReg_out_4 <= 0;
+	     prif.pc_4_out_4 <= 0;
+	     // prif.pc_branch_out_4 <= 0;
+	     prif.dmemload_out_4 <= 0;
+	     prif.ALUout_out_4 <= 0;
+	     prif.wsel_out_4 <= 0;
+	     
+	     prif.j_out_3 <= 0;
+	     prif.JR_out_3 <= 0;
+	     prif.rdat1_out_3 <= 0;
+	  end // if (nRST == 0)
+	else
+	  begin
+	     // third register
+	     prif.jumpAddr_out_3 <= prif.jumpAddr_in_3;
+	     prif.RegWrite_out_3 <= prif.RegWrite_in_3;
+	     prif.dWEN_out_3 <= prif.dWEN_in_3;
+	     prif.dREN_out_3 <= prif.dREN_in_3;
+	     prif.halt_or_out_3 <= prif.halt_or_in_3;
+	     prif.jal_out_3 <= prif.jal_in_3;
+	     prif.bne_out_3 <= prif.bne_in_3;
+	     prif.beq_out_3 <= prif.beq_in_3;
+	     prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
+	     prif.zero_out_3 <= prif.zero_in_3;
+	     prif.ALUout_out_3 <= prif.ALUout_in_3;
+	     prif.dmemstore_out_3 <= prif.dmemstore_in_3;
+	     prif.pc_4_out_3 <= prif.pc_4_in_3;
+	     prif.pc_imm_out_3 <= prif.pc_imm_in_3;
+	     prif.wsel_out_3 <= prif.wsel_in_3;
+	     // fourth register
+	     prif.RegWrite_out_4 <= prif.RegWrite_in_4;
+	     prif.halt_or_out_4 <= prif.halt_or_in_4;
+	     prif.jal_out_4 <= prif.jal_in_4;
+	     prif.MemtoReg_out_4 <= prif.MemtoReg_in_4;
+	     prif.pc_4_out_4 <= prif.pc_4_in_4;
+	     // prif.pc_branch_out_4 <= prif.pc_branch_in_4;
+	     prif.dmemload_out_4 <= prif.dmemload_in_4;
+	     prif.ALUout_out_4 <= prif.ALUout_in_4;
+	     prif.wsel_out_4 <= prif.wsel_in_4;
+	     
+	     prif.j_out_3 <= prif.j_in_3;
+	     prif.JR_out_3 <= prif.JR_in_3;
+	     prif.rdat1_out_3 <= prif.rdat1_in_3;
+	  end
+     end
+   
+
    
 
 endmodule // pipeline_reg

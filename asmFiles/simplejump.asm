@@ -1,5 +1,5 @@
 
-main:
+	org 0x0000
 	ori $2, $0, 0x1234
 	ori $3, $0, 0x1234
 	j jumptarget
