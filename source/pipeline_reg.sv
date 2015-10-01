@@ -51,6 +51,13 @@ module pipeline_reg(
 	 prif.ALUOP_out_2 <= ALU_SLL;
 	 prif.MemtoReg_out_2 <= 0;
 
+	 // part of third reg
+	 prif.RegWrite_out_3 <= 0;
+	 prif.dWEN_out_3 <= 0;
+	 prif.dREN_out_3 <= 0;
+	 prif.halt_or_out_3 <= 0;
+
+	 prif.MemtoReg_out_3 <= 0;
 	 
       end // if (nRST == 0)
       else if(prif.flush)
@@ -89,6 +96,14 @@ module pipeline_reg(
 	   prif.RegDst_out_2 <= 0;
 	   prif.ALUOP_out_2 <= ALU_SLL;
 	   prif.MemtoReg_out_2 <= 0;
+
+	   // part of third reg
+	   prif.RegWrite_out_3 <= 0;
+	   prif.dWEN_out_3 <= 0;
+	   prif.dREN_out_3 <= 0;
+	   prif.halt_or_out_3 <= 0;
+
+	   prif.MemtoReg_out_3 <= 0;
 	   
 	end
      
@@ -127,6 +142,14 @@ module pipeline_reg(
 	 prif.RegDst_out_2 <= prif.RegDst_in_2;
 	 prif.ALUOP_out_2 <= prif.ALUOP_in_2;
 	 prif.MemtoReg_out_2 <= prif.MemtoReg_in_2;
+
+	 // part of third reg
+	 prif.RegWrite_out_3 <= prif.RegWrite_in_3;
+	 prif.dWEN_out_3 <= prif.dWEN_in_3;
+	 prif.dREN_out_3 <= prif.dREN_in_3;
+	 prif.halt_or_out_3 <= prif.halt_or_in_3;
+
+	 prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;	 
 	 
       end // else: !if(nRST == 0)
       
@@ -142,14 +165,11 @@ module pipeline_reg(
 	if (nRST == 0) 
 	  begin
 	     prif.jumpAddr_out_3 <= 0;
-	     prif.RegWrite_out_3 <= 0;
-	     prif.dWEN_out_3 <= 0;
-	     prif.dREN_out_3 <= 0;
-	     prif.halt_or_out_3 <= 0;
+	     
 	     prif.jal_out_3 <= 0;
 	     prif.bne_out_3 <= 0;
 	     prif.beq_out_3 <= 0;
-	     prif.MemtoReg_out_3 <= 0;
+	     
 	     prif.zero_out_3 <= 0;
 	     prif.ALUout_out_3 <= 0;
 	     prif.dmemstore_out_3 <= 0;
@@ -174,14 +194,11 @@ module pipeline_reg(
 	  begin
 	     // third register
 	     prif.jumpAddr_out_3 <= prif.jumpAddr_in_3;
-	     prif.RegWrite_out_3 <= prif.RegWrite_in_3;
-	     prif.dWEN_out_3 <= prif.dWEN_in_3;
-	     prif.dREN_out_3 <= prif.dREN_in_3;
-	     prif.halt_or_out_3 <= prif.halt_or_in_3;
+
 	     prif.jal_out_3 <= prif.jal_in_3;
 	     prif.bne_out_3 <= prif.bne_in_3;
 	     prif.beq_out_3 <= prif.beq_in_3;
-	     prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
+
 	     prif.zero_out_3 <= prif.zero_in_3;
 	     prif.ALUout_out_3 <= prif.ALUout_in_3;
 	     prif.dmemstore_out_3 <= prif.dmemstore_in_3;

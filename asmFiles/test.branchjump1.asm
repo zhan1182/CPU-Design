@@ -7,9 +7,11 @@
   ori   $15, $zero, jmpR
   beq   $zero, $zero, braZ
   sw    $1, 0($2)
+  #ori   $5, $zero, 0x0070
 braZ:
   jal   braR
   sw    $1, 4($2)
+  #ori   $6, $zero, 0x0070
 end:
   sw    $ra, 16($2)
   HALT
