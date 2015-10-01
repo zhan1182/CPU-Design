@@ -44,6 +44,11 @@ module datapath (
    word_t pc, next_pc;
    word_t pc_4;
    word_t pc_imm;
+
+   /////////////// NEW ADDED: Move pc updated to MEM stage 9/29/2015 ///////////////////////
+   word_t pc_final;
+   logic      BRJ;// Signal to judge jump or pc + 4
+   
    
    // branch tmp
    word_t imm_tmp_shift2;
@@ -74,7 +79,6 @@ module datapath (
    /////////////// NEW ADDED: Hazard Unit 9/29/2015 ///////////////////////
    logic [1:0] 	forwardA, forwardB;
    word_t tempA, tempB; // for line 320
-   
 
 
 
@@ -146,7 +150,7 @@ module datapath (
    assign rf_if.rsel2 = pr_if.instr_out_1[20:16];
    assign pr_if.rdat1_in_2 = rf_if.rdat1;
    assign pr_if.rdat2_in_2 = rf_if.rdat2;
-   assign pr_if.JRaddr_in_2 = rf_if.rdat1;
+   // assign pr_if.JRaddr_in_2 = rf_if.rdat1;Use rdat1_in_3 instead
    // Going through signals
    assign pr_if.rt_in_2 = pr_if.instr_out_1[20:16];
    assign pr_if.rd_in_2 = pr_if.instr_out_1[15:11];
@@ -220,7 +224,7 @@ module datapath (
    // Determine branch
    assign branch_eq = pr_if.zero_out_3 & pr_if.beq_out_3;
    assign branch_go = (pr_if.bne_out_3) ? (~branch_eq) : branch_eq;
-   // assign pr_if.pc_4_branch_in_4 = (branch_go) ? pr_if.pc_imm_out_3 : pr_if.pc_4_out_3;
+   // assign pc_4_branch_out_3 = (branch_go) ? pr_if.pc_imm_out_3 : pr_if.pc_4_out_3; // Assign a local variable
    
 
    // Connect going through signals
@@ -270,25 +274,13 @@ module datapath (
 
    // Calculate next pc position
    assign pc_4 = pc + 4;
-   assign next_pc = pc_4;
+   // assign next_pc = pc_4;
    
    // assign pc_j = {pc_4[31:28], instr[25:0], 2'b00};
    // assign pc_jr = rf_if.rdat1;
    
    // assign pc_4_branch = (branch_go) ? pc_imm : pc_4;
    // // assign next_pc = (cu_if.jr & (~cu_if.j) ) ? pc_jr : (cu_if.j | cu_if.jal) ? pc_j : pc_4_branch;//add ~j
-   // always_comb
-   //   begin
-   // 	next_pc = pc_4_branch;
-   // 	if(cu_if.jr)
-   // 	  begin
-   // 	     next_pc = pc_jr;
-   // 	  end
-   // 	else if(cu_if.j | cu_if.jal)
-   // 	  begin
-   // 	     next_pc = pc_j;
-   // 	  end
-   //   end
    
    
    // always_ff @ (posedge CLK, negedge nRST)
@@ -353,10 +345,39 @@ module datapath (
    assign pr_if.jumpAddr_in_3 = pr_if.jumpAddr_out_2;
    assign pr_if.j_in_3 = pr_if.j_out_2;
    assign pr_if.JR_in_3 = pr_if.JR_out_2;
-   assign pr_if.rdat1_in_3 = pr_if.rdat1_out_2;
-
-   word_t pc_final;
+   assign pr_if.rdat1_in_3 = pr_if.rdat1_out_2;// JR addr
    
-
+   // Combinational block to determine jump or not
+   // BRJ is the output control signal
+   always_comb
+     begin
+   	pc_final = 0;
+	BRJ = 0;
+	
+   	if(pr_if.JR_out_3)
+   	  begin
+   	     pc_final = pr_if.rdat1_out_3;// JR addr
+	     BRJ = 1;
+   	  end
+   	else if(pr_if.j_out_3 | pr_if.jal_out_3)
+   	  begin
+	     // Calculate pc jump addr
+   	     pc_final = {pr_if.pc_4_out_3[31:28], pr_if.jumpAddr_out_3, 2'b00};
+	     BRJ = 1;
+   	  end
+	else if(branch_go)
+	  begin
+	     pc_final = pr_if.pc_imm_out_3;// Branch address
+	     BRJ = 1;
+	  end
+     end // always_comb
+   
+   // Assign the next pc
+   assign next_pc = (BRJ) ? pc_final : pc_4;
+   
+   // Connet to the pipeline register, flush the first and second register
+   assign pr_if.flush = BRJ;
+   
+   
    
 endmodule
