@@ -308,6 +308,10 @@ module datapath (
    assign hiif.rs_out_2 = pr_if.rs_out_2;
 
    assign hiif.dWEN_out_2 = pr_if.dWEN_out_2;
+   assign hiif.dREN_out_2 = pr_if.dREN_out_2;
+   assign hiif.rs_in_2 = pr_if.rs_in_2;
+   assign hiif.rt_in_2 = pr_if.rt_in_2;
+   
 
 
    assign forwardA = hiif.forwardA;
@@ -321,7 +325,7 @@ module datapath (
       tempA = pr_if.rdat1_out_2;
       tempB = pr_if.rdat2_out_2;
       
-      if (forwardA == 2'b01 ) begin
+      if (forwardA == 2'b01) begin
 	 tempA = rf_if.wdat;
       end
       if (forwardB == 2'b01) begin
@@ -333,6 +337,13 @@ module datapath (
       if(forwardB == 2'b10) begin
 	 tempB = pr_if.ALUout_out_3;
       end
+      if (pr_if.lwForwardA_in_3 == 1) begin
+	 tempA = pr_if.dmemload_in_4;
+      end
+      if (pr_if.lwForwardB_in_3 == 1) begin
+	 tempB = pr_if.dmemload_in_4;
+      end
+      
    end // always_comb
 
 
@@ -354,15 +365,15 @@ module datapath (
    	pc_final = 0;
 	BRJ = 0;
 	
-   	if(pr_if.JR_out_3)
-   	  begin
-   	     pc_final = pr_if.rdat1_out_3;// JR addr
-	     BRJ = 1;
-   	  end
-   	else if(pr_if.j_out_3 | pr_if.jal_out_3)
+   	if (pr_if.j_out_3 | pr_if.jal_out_3)
    	  begin
 	     // Calculate pc jump addr
    	     pc_final = {pr_if.pc_4_out_3[31:28], pr_if.jumpAddr_out_3, 2'b00};
+	     BRJ = 1;
+   	  end
+   	else if(pr_if.JR_out_3)
+   	  begin
+   	     pc_final = pr_if.rdat1_out_3;// JR addr
 	     BRJ = 1;
    	  end
 	else if(branch_go)
@@ -377,7 +388,18 @@ module datapath (
    
    // Connet to the pipeline register, flush the first and second register
    assign pr_if.flush = BRJ;
+ //|| hiif.lwForwardA || hiif.lwForwardB; // new added for lab7
+
+   // assign the new added signal lwStall in pipe reg
+   assign pr_if.lwForwardA_in_2 = hiif.lwForwardA;
+   assign pr_if.lwForwardA_in_3 = pr_if.lwForwardA_out_2;
+   assign pr_if.lwForwardA_in_4 = pr_if.lwForwardA_out_3;
+
+   assign pr_if.lwForwardB_in_2 = hiif.lwForwardB;
+   assign pr_if.lwForwardB_in_3 = pr_if.lwForwardB_out_2;
+   assign pr_if.lwForwardB_in_4 = pr_if.lwForwardB_out_3;
+
    
-   
+
    
 endmodule

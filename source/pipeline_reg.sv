@@ -52,12 +52,12 @@ module pipeline_reg(
 	 prif.MemtoReg_out_2 <= 0;
 
 	 // part of third reg
-	 prif.RegWrite_out_3 <= 0;
+	 
 	 prif.dWEN_out_3 <= 0;
-	 prif.dREN_out_3 <= 0;
+
 	 prif.halt_or_out_3 <= 0;
 
-	 prif.MemtoReg_out_3 <= 0;
+	 
 	 
       end // if (nRST == 0)
       else if(prif.flush)
@@ -98,12 +98,9 @@ module pipeline_reg(
 	   prif.MemtoReg_out_2 <= 0;
 
 	   // part of third reg
-	   prif.RegWrite_out_3 <= 0;
 	   prif.dWEN_out_3 <= 0;
-	   prif.dREN_out_3 <= 0;
 	   prif.halt_or_out_3 <= 0;
 
-	   prif.MemtoReg_out_3 <= 0;
 	   
 	end
      
@@ -144,12 +141,12 @@ module pipeline_reg(
 	 prif.MemtoReg_out_2 <= prif.MemtoReg_in_2;
 
 	 // part of third reg
-	 prif.RegWrite_out_3 <= prif.RegWrite_in_3;
+	 // deleted regwrite
 	 prif.dWEN_out_3 <= prif.dWEN_in_3;
-	 prif.dREN_out_3 <= prif.dREN_in_3;
+	 // deleted dREN
 	 prif.halt_or_out_3 <= prif.halt_or_in_3;
 
-	 prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;	 
+	 // deleted memtoreg	 
 	 
       end // else: !if(nRST == 0)
       
@@ -189,6 +186,18 @@ module pipeline_reg(
 	     prif.j_out_3 <= 0;
 	     prif.JR_out_3 <= 0;
 	     prif.rdat1_out_3 <= 0;
+
+	     prif.lwForwardA_out_2 <= 0;
+	     prif.lwForwardA_out_3 <= 0;
+	     prif.lwForwardA_out_4 <= 0;
+
+	     prif.lwForwardB_out_2 <= 0;
+	     prif.lwForwardB_out_3 <= 0;
+	     prif.lwForwardB_out_4 <= 0;
+	     prif.dREN_out_3 <= 0;
+	     prif.MemtoReg_out_3 <= 0;
+	     prif.RegWrite_out_3 <= 0;
+	     
 	  end // if (nRST == 0)
 	else
 	  begin
@@ -219,6 +228,17 @@ module pipeline_reg(
 	     prif.j_out_3 <= prif.j_in_3;
 	     prif.JR_out_3 <= prif.JR_in_3;
 	     prif.rdat1_out_3 <= prif.rdat1_in_3;
+
+	     prif.lwForwardA_out_2 <= prif.lwForwardA_in_2;
+	     prif.lwForwardA_out_3 <= prif.lwForwardA_in_3;
+	     prif.lwForwardA_out_4 <= prif.lwForwardA_in_4;
+
+	     prif.lwForwardB_out_2 <= prif.lwForwardB_in_2;
+	     prif.lwForwardB_out_3 <= prif.lwForwardB_in_3;
+	     prif.lwForwardB_out_4 <= prif.lwForwardB_in_4;
+	     prif.dREN_out_3 <= prif.dREN_in_3;
+	     prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
+	     prif.RegWrite_out_3 <= prif.RegWrite_in_3;
 	  end
      end
    
