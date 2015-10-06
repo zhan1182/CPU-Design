@@ -57,6 +57,7 @@ module pipeline_reg(
 
 	 prif.halt_or_out_3 <= 0;
 
+	 prif.RegWrite_out_3 <= 0;
 	 
 	 
       end // if (nRST == 0)
@@ -100,6 +101,10 @@ module pipeline_reg(
 	   // part of third reg
 	   prif.dWEN_out_3 <= 0;
 	   prif.halt_or_out_3 <= 0;
+	   prif.RegWrite_out_3 <= 0;
+	   
+	   // part of fourth reg
+
 
 	   
 	end
@@ -143,6 +148,8 @@ module pipeline_reg(
 	 // part of third reg
 	 // deleted regwrite
 	 prif.dWEN_out_3 <= prif.dWEN_in_3;
+	 prif.RegWrite_out_3 <= prif.RegWrite_in_3;
+	 
 	 // deleted dREN
 	 prif.halt_or_out_3 <= prif.halt_or_in_3;
 
@@ -194,7 +201,6 @@ module pipeline_reg(
 
 	     prif.dREN_out_3 <= 0;
 	     prif.MemtoReg_out_3 <= 0;
-	     prif.RegWrite_out_3 <= 0;
 	     
 	  end // if (nRST == 0)
 	else
@@ -234,7 +240,6 @@ module pipeline_reg(
 
 	     prif.dREN_out_3 <= prif.dREN_in_3;
 	     prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
-	     prif.RegWrite_out_3 <= prif.RegWrite_in_3;
 	  end
      end
    

@@ -20,6 +20,8 @@ module hazard(
       hiif.forwardC = 0;
       hiif.lwForwardA = 0;
       hiif.lwForwardB = 0;
+      hiif.forwardD = 0;
+      
       
       
       // when 2nd line needs the result of 1st line, EX hazards
@@ -41,6 +43,11 @@ module hazard(
 	begin
 	   hiif.forwardC = 1;
 	end
+      if(hiif.dWEN_out_2 && hiif.wsel_out_4 != 0 && hiif.wsel_out_4 == hiif.rt_out_2 && !(hiif.dWEN_out_2 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == hiif.rt_out_2)) begin
+	 hiif.forwardD = 1;
+	 
+      end
+      
       
       // load detection
       if (hiif.dREN_out_2 && (hiif.rt_out_2 == hiif.rs_in_2))begin

@@ -343,7 +343,7 @@ module datapath (
 
 
    // Line 189 commented out
-   assign pr_if.dmemstore_in_3 = (hiif.forwardC) ? pr_if.ALUout_out_3 : pr_if.rdat2_out_2;
+   assign pr_if.dmemstore_in_3 = (hiif.forwardC) ? pr_if.ALUout_out_3 : ((hiif.forwardD) ? pr_if.ALUout_out_4 : pr_if.rdat2_out_2);
    
 
    // New added pipeline register signals here
