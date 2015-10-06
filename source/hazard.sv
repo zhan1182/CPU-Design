@@ -14,7 +14,6 @@ module hazard(
    import cpu_types_pkg::*;
 
    
-   ////////////////////// For EX Hazard /////////////////////
    always_comb begin
       hiif.forwardA = 0;
       hiif.forwardB = 0;

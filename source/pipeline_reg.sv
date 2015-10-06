@@ -188,12 +188,10 @@ module pipeline_reg(
 	     prif.rdat1_out_3 <= 0;
 
 	     prif.lwForwardA_out_2 <= 0;
-	     prif.lwForwardA_out_3 <= 0;
-	     prif.lwForwardA_out_4 <= 0;
+
 
 	     prif.lwForwardB_out_2 <= 0;
-	     prif.lwForwardB_out_3 <= 0;
-	     prif.lwForwardB_out_4 <= 0;
+
 	     prif.dREN_out_3 <= 0;
 	     prif.MemtoReg_out_3 <= 0;
 	     prif.RegWrite_out_3 <= 0;
@@ -230,12 +228,10 @@ module pipeline_reg(
 	     prif.rdat1_out_3 <= prif.rdat1_in_3;
 
 	     prif.lwForwardA_out_2 <= prif.lwForwardA_in_2;
-	     prif.lwForwardA_out_3 <= prif.lwForwardA_in_3;
-	     prif.lwForwardA_out_4 <= prif.lwForwardA_in_4;
+
 
 	     prif.lwForwardB_out_2 <= prif.lwForwardB_in_2;
-	     prif.lwForwardB_out_3 <= prif.lwForwardB_in_3;
-	     prif.lwForwardB_out_4 <= prif.lwForwardB_in_4;
+
 	     prif.dREN_out_3 <= prif.dREN_in_3;
 	     prif.MemtoReg_out_3 <= prif.MemtoReg_in_3;
 	     prif.RegWrite_out_3 <= prif.RegWrite_in_3;

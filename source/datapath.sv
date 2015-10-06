@@ -25,11 +25,6 @@
 
 
 
-
-
-
-
-
 module datapath (
   input logic CLK, nRST,
   datapath_cache_if.dp dpif
@@ -337,10 +332,10 @@ module datapath (
       if(forwardB == 2'b10) begin
 	 tempB = pr_if.ALUout_out_3;
       end
-      if (pr_if.lwForwardA_in_3 == 1) begin
+      if (pr_if.lwForwardA_out_2 == 1) begin
 	 tempA = pr_if.dmemload_in_4;
       end
-      if (pr_if.lwForwardB_in_3 == 1) begin
+      if (pr_if.lwForwardB_out_2 == 1) begin
 	 tempB = pr_if.dmemload_in_4;
       end
       
@@ -392,12 +387,10 @@ module datapath (
 
    // assign the new added signal lwStall in pipe reg
    assign pr_if.lwForwardA_in_2 = hiif.lwForwardA;
-   assign pr_if.lwForwardA_in_3 = pr_if.lwForwardA_out_2;
-   assign pr_if.lwForwardA_in_4 = pr_if.lwForwardA_out_3;
+
 
    assign pr_if.lwForwardB_in_2 = hiif.lwForwardB;
-   assign pr_if.lwForwardB_in_3 = pr_if.lwForwardB_out_2;
-   assign pr_if.lwForwardB_in_4 = pr_if.lwForwardB_out_3;
+
 
    
 
