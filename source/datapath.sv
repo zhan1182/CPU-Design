@@ -392,6 +392,8 @@ module datapath (
    assign pr_if.lwForwardB_in_2 = hiif.lwForwardB;
 
 
+   // for solve lw + sw
+   assign hiif.dREN_out_3 = pr_if.dREN_out_3;
    
 
    

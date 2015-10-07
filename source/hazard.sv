@@ -39,7 +39,7 @@ module hazard(
 	 hiif.forwardB = 2'b01;
       end
 
-      if(hiif.dWEN_out_2 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == hiif.rt_out_2)
+      if(hiif.dWEN_out_2 && !hiif.dREN_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == hiif.rt_out_2)
 	begin
 	   hiif.forwardC = 1;
 	end
