@@ -50,8 +50,13 @@ module pipeline_reg(
 	 prif.RegDst_out_2 <= 0;
 	 prif.ALUOP_out_2 <= ALU_SLL;
 	 prif.MemtoReg_out_2 <= 0;
-
+	 
 	 // part of third reg
+	 prif.j_out_3 <= 0;
+	 prif.jal_out_3 <= 0;
+	 prif.JR_out_3 <= 0;
+	 prif.bne_out_3 <= 0;
+	 prif.beq_out_3 <= 0;
 	 
 	 prif.dWEN_out_3 <= 0;
 
@@ -102,7 +107,12 @@ module pipeline_reg(
 	   prif.dWEN_out_3 <= 0;
 	   prif.halt_or_out_3 <= 0;
 	   prif.RegWrite_out_3 <= 0;
-	   
+
+	   prif.j_out_3 <= 0;
+	   prif.jal_out_3 <= 0;
+	   prif.JR_out_3 <= 0;
+	   prif.bne_out_3 <= 0;
+	   prif.beq_out_3 <= 0;
 	   // part of fourth reg
 
 
@@ -153,6 +163,11 @@ module pipeline_reg(
 	 // deleted dREN
 	 prif.halt_or_out_3 <= prif.halt_or_in_3;
 
+	 prif.j_out_3 <= prif.j_in_3;
+	 prif.jal_out_3 <= prif.jal_in_3;
+	 prif.JR_out_3 <= prif.JR_in_3;
+	 prif.bne_out_3 <= prif.bne_in_3;
+	 prif.beq_out_3 <= prif.beq_in_3;
 	 // deleted memtoreg	 
 	 
       end // else: !if(nRST == 0)
@@ -169,10 +184,7 @@ module pipeline_reg(
 	if (nRST == 0) 
 	  begin
 	     prif.jumpAddr_out_3 <= 0;
-	     
-	     prif.jal_out_3 <= 0;
-	     prif.bne_out_3 <= 0;
-	     prif.beq_out_3 <= 0;
+
 	     
 	     prif.zero_out_3 <= 0;
 	     prif.ALUout_out_3 <= 0;
@@ -189,9 +201,7 @@ module pipeline_reg(
 	     prif.dmemload_out_4 <= 0;
 	     prif.ALUout_out_4 <= 0;
 	     prif.wsel_out_4 <= 0;
-	     
-	     prif.j_out_3 <= 0;
-	     prif.JR_out_3 <= 0;
+
 	     prif.rdat1_out_3 <= 0;
 
 	     prif.lwForwardA_out_2 <= 0;
@@ -207,10 +217,6 @@ module pipeline_reg(
 	  begin
 	     // third register
 	     prif.jumpAddr_out_3 <= prif.jumpAddr_in_3;
-
-	     prif.jal_out_3 <= prif.jal_in_3;
-	     prif.bne_out_3 <= prif.bne_in_3;
-	     prif.beq_out_3 <= prif.beq_in_3;
 
 	     prif.zero_out_3 <= prif.zero_in_3;
 	     prif.ALUout_out_3 <= prif.ALUout_in_3;
@@ -228,9 +234,7 @@ module pipeline_reg(
 	     prif.dmemload_out_4 <= prif.dmemload_in_4;
 	     prif.ALUout_out_4 <= prif.ALUout_in_4;
 	     prif.wsel_out_4 <= prif.wsel_in_4;
-	     
-	     prif.j_out_3 <= prif.j_in_3;
-	     prif.JR_out_3 <= prif.JR_in_3;
+
 	     prif.rdat1_out_3 <= prif.rdat1_in_3;
 
 	     prif.lwForwardA_out_2 <= prif.lwForwardA_in_2;
