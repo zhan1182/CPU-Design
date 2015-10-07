@@ -172,9 +172,6 @@ module pipeline_reg(
 	 
       end // else: !if(nRST == 0)
       
-      if (prif.dhit == 1) begin
-	 prif.instr_out_1 <= 0;
-      end
      
    end // always_ff @ (posedge CLK, negedge nRST)
 

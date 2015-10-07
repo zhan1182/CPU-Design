@@ -108,12 +108,12 @@ module datapath (
    
    /***************************************************************************/
 
-   assign pr_if.dhit = dpif.dhit; // added dhit
+   //assign pr_if.dhit = dpif.dhit; // added dhit
    
    
    // Connect stage 1, fetch
    // Intruction from cache (dpif.imemload)
-   assign pr_if.instr_in_1 = dpif.imemload;
+   assign pr_if.instr_in_1 = dpif.dhit ? 0:dpif.imemload;
    assign pr_if.pc_4_in_1 = pc_4;
 
 
@@ -239,24 +239,26 @@ module datapath (
 
 
    // NEW ADDED for mapped, halt go through flip flop
-   logic 	halt_curr, halt_next;
+   // logic 	halt_curr, halt_next;
 
-   always_ff @(posedge CLK, negedge nRST) begin
-      if (!nRST) begin
-	 halt_curr <= 0;
-      end
-      else begin
-	 halt_curr <= halt_next;
-      end
+   // always_ff @(posedge CLK, negedge nRST) begin
+   //    if (!nRST) begin
+   // 	 halt_curr <= 0;
+   //    end
+   //    else begin
+   // 	 halt_curr <= halt_next;
+   //    end
       
-   end
+   // end
    
-   assign halt_next = pr_if.halt_or_out_4;
+   // assign halt_next = pr_if.halt_or_out_4;
    
 
    
    // Connect Halt signal out from datapath to cache
-   assign dpif.halt = halt_curr;
+   //assign dpif.halt = halt_curr;
+   assign dpif.halt = pr_if.halt_or_out_4;
+   
    
    // Connect write back signals
    assign rf_if.WEN = pr_if.RegWrite_out_4;
@@ -413,6 +415,8 @@ module datapath (
 
    // for solve lw + sw
    assign hiif.dREN_out_3 = pr_if.dREN_out_3;
+
+
    
 
    
