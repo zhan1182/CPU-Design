@@ -239,25 +239,32 @@ module datapath (
 
 
    // NEW ADDED for mapped, halt go through flip flop
-   // logic 	halt_curr, halt_next;
-
-   // always_ff @(posedge CLK, negedge nRST) begin
-   //    if (!nRST) begin
-   // 	 halt_curr <= 0;
-   //    end
-   //    else begin
-   // 	 halt_curr <= halt_next;
-   //    end
-      
-   // end
+   logic 	halt_curr, halt_next;
+   logic 	forceHalt;
    
-   // assign halt_next = pr_if.halt_or_out_4;
+   always_ff @(posedge CLK, negedge nRST) begin
+      if (!nRST) begin
+   	 halt_curr <= 0;
+      end
+      else if (forceHalt == 1) begin
+   	 halt_curr <= 1;
+      end
+      else begin
+	 halt_curr <= halt_next;
+      end
+      
+      
+   end
+   assign forceHalt = halt_curr;
+   
+   assign halt_next = pr_if.halt_or_out_4;
+   //assign pr_if.halt = dpif.halt;
    
 
    
    // Connect Halt signal out from datapath to cache
-   //assign dpif.halt = halt_curr;
-   assign dpif.halt = pr_if.halt_or_out_4;
+   assign dpif.halt = halt_curr;
+   //assign dpif.halt = pr_if.halt_or_out_4;
    
    
    // Connect write back signals
