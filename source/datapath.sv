@@ -209,7 +209,7 @@ module datapath (
    // Connect interface with datapath output (TO/FROM RAM)
    // Write to ram
    assign dpif.dmemaddr = pr_if.ALUout_out_3;
-   assign dpif.dmemstore = pr_if.dmemstore_out_3;
+   assign dpif.dmemstore = pr_if.halt_or_out_4 ? 0: pr_if.dmemstore_out_3;
    // Read from ram
    assign pr_if.dmemload_in_4 = dpif.dmemload;
    // Send out ram enables
