@@ -182,7 +182,7 @@ module datapath (
    // Calculate branch addr
    assign imm_tmp_shift2 = imm_tmp << 2;
    assign pc_imm = pr_if.pc_4_out_2 + imm_tmp_shift2;
-   assign pr_if.pc_imm_in_3 = pc_imm;
+   assign pr_if.pc_imm_in_3 = (BRJ && dpif.ihit == 0 && dpif.dhit == 0) ? pc_final : pc_imm;
    
    // Connect alu output
    assign pr_if.zero_in_3 = alu_if.zero;
@@ -218,7 +218,7 @@ module datapath (
 
    // Determine branch
    assign branch_eq = pr_if.zero_out_3 & pr_if.beq_out_3;
-   assign branch_go = (pr_if.bne_out_3) ? (~branch_eq) : branch_eq;
+   assign branch_go = ((pr_if.bne_out_3) ? (~branch_eq) : branch_eq);
    // assign pc_4_branch_out_3 = (branch_go) ? pr_if.pc_imm_out_3 : pr_if.pc_4_out_3; // Assign a local variable
    
 
@@ -423,7 +423,8 @@ module datapath (
    // for solve lw + sw
    assign hiif.dREN_out_3 = pr_if.dREN_out_3;
 
-
+   assign pr_if.enable = ((dpif.dhit == 0 & pr_if.MemtoReg_in_4 == 1 & pr_if.dREN_out_3 == 1) | (dpif.dhit == 0 & pr_if.dWEN_out_3 == 1)| (dpif.dhit == 0 & dpif.ihit == 0 & (pr_if.MemtoReg_in_4 == 1 | pr_if.dWEN_out_3 == 1))) ? 0:1;
+   
    
 
    

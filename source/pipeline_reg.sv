@@ -66,7 +66,7 @@ module pipeline_reg(
 	 
 	 
       end // if (nRST == 0)
-      else if(prif.flush)
+      else if(prif.flush & prif.enable == 1)
 	begin
 	   prif.instr_out_1 <= 0;
 	   prif.pc_4_out_1 <= 0;
@@ -119,7 +119,7 @@ module pipeline_reg(
 	   
 	end
      
-      else begin
+      else if (prif.enable == 1)begin
 	 prif.instr_out_1 <= prif.instr_in_1;
 	 prif.pc_4_out_1 <= prif.pc_4_in_1;
 	 prif.rdat1_out_2 <= prif.rdat1_in_2;
@@ -210,7 +210,7 @@ module pipeline_reg(
 	     prif.MemtoReg_out_3 <= 0;
 	     
 	  end // if (nRST == 0)
-	else
+	else if (prif.enable == 1)
 	  begin
 	     // third register
 	     prif.jumpAddr_out_3 <= prif.jumpAddr_in_3;
