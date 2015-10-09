@@ -423,7 +423,7 @@ module datapath (
    // for solve lw + sw
    assign hiif.dREN_out_3 = pr_if.dREN_out_3;
 
-   assign pr_if.enable = ((dpif.dhit == 0 & pr_if.MemtoReg_in_4 == 1 & pr_if.dREN_out_3 == 1) | (dpif.dhit == 0 & pr_if.dWEN_out_3 == 1)| (dpif.dhit == 0 & dpif.ihit == 0 & (pr_if.MemtoReg_in_4 == 1 | pr_if.dWEN_out_3 == 1))) ? 0:1;
+   assign pr_if.enable = ((dpif.dhit == 0 & pr_if.MemtoReg_in_4 == 1 & pr_if.dREN_out_3 == 1) | (dpif.dhit == 0 & pr_if.dWEN_out_3 == 1)| (dpif.dhit == 0 & dpif.ihit == 0 & (pr_if.MemtoReg_in_4 == 1 | pr_if.dWEN_out_3 == 1)) | (BRJ & dpif.ihit == 0 & dpif.dhit == 0)) ? 0:1;
    
    
 
