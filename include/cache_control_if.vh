@@ -59,7 +59,7 @@ interface cache_control_if;
   );
 
   // icache ports to controller
-  /*modport icache (
+  modport icache (
     input   iwait, iload,
     output  iREN, iaddr
   );
@@ -76,7 +76,7 @@ interface cache_control_if;
             ccwait, ccinv, ccsnoopaddr,
     output  iREN, iaddr, dREN, dWEN, daddr, dstore,
             ccwrite, cctrans
-  );*/
+  );
 
   modport caches (
     input   .iwait(iwait[CPUID]), 
