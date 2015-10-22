@@ -76,7 +76,8 @@ module datapath (
    word_t tempA, tempB; // for line 320
 
 
-
+   /////////////// NEW ADDED: reg enable 10/22/2015 ///////////////////////
+   logic 	reg_enable;
    
    // Load interface
    control_unit_if cu_if();
@@ -287,7 +288,7 @@ module datapath (
 	  end
 	else
 	  begin
-	     if(dpif.ihit == 1'b1 && dpif.dhit == 1'b0)
+	     if(dpif.ihit == 1'b1 && dpif.dhit == 1'b0 && reg_enable == 1'b1)
 	       begin
 		  pc <= next_pc;
 	       end
@@ -423,7 +424,9 @@ module datapath (
    // for solve lw + sw
    assign hiif.dREN_out_3 = pr_if.dREN_out_3;
 
-   assign pr_if.enable = ((dpif.dhit == 0 & pr_if.MemtoReg_in_4 == 1 & pr_if.dREN_out_3 == 1) | (dpif.dhit == 0 & pr_if.dWEN_out_3 == 1)| (dpif.dhit == 0 & dpif.ihit == 0 & (pr_if.MemtoReg_in_4 == 1 | pr_if.dWEN_out_3 == 1)) | (BRJ & dpif.ihit == 0 & dpif.dhit == 0)) ? 0:1;
+   assign pr_if.enable = reg_enable;
+   
+   assign reg_enable = ((dpif.dhit == 0 & pr_if.MemtoReg_in_4 == 1 & pr_if.dREN_out_3 == 1) | (dpif.dhit == 0 & pr_if.dWEN_out_3 == 1) | (dpif.dhit == 0 & dpif.ihit == 0 & (pr_if.MemtoReg_in_4 == 1 | pr_if.dWEN_out_3 == 1)) | (BRJ & dpif.ihit == 0 & dpif.dhit == 0)) ? 0:1;
    
    
 

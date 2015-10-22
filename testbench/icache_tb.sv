@@ -69,7 +69,7 @@ program test(input logic CLK, output logic nRST, datapath_cache_if.icache dcif, 
 	@(negedge CLK);
 	ccif.iwait = 0;
 	
-	// Test 2, test cache hit
+	// Test 3, test cache hit
 	@(posedge CLK);
 	if(ccif.iREN == 0 && dcif.ihit == 1)
 	  begin
@@ -80,7 +80,7 @@ program test(input logic CLK, output logic nRST, datapath_cache_if.icache dcif, 
 	     $display("FAILED.");
 	  end
 
-	// Test 3, test cache miss
+	// Test 4, test cache miss
 	@(negedge CLK);
 	dcif.imemaddr = 4;
 	
