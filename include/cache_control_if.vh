@@ -64,13 +64,13 @@ interface cache_control_if;
     output  iREN, iaddr
   );
 
-  // dcache ports to controller
-  // modport dcache (
-  //   input   dwait, dload,
-  //           ccwait, ccinv, ccsnoopaddr,
-  //   output  dREN, dWEN, daddr, dstore,
-  //           ccwrite, cctrans
-  // );
+  //dcache ports to controller
+  modport dcache (
+    input   dwait, dload,
+            ccwait, ccinv, ccsnoopaddr,
+    output  dREN, dWEN, daddr, dstore,
+            ccwrite, cctrans
+  );
   // modport caches (
   //   input   iwait, iload, dwait, dload,
   //           ccwait, ccinv, ccsnoopaddr,
@@ -105,20 +105,20 @@ interface cache_control_if;
 //     output  .iaddr(iaddr[CPUID])  
 // );
 
-  modport dcache (
-    input   .dwait(dwait[CPUID]), 
-    input   .dload(dload[CPUID]),
-    input   .ccwait(ccwait[CPUID]),
-    input   .ccinv(ccinv[CPUID]),
-    input   .ccsnoopaddr(ccsnoopaddr[CPUID]),
+//   modport dcache (
+//     input   .dwait(dwait[CPUID]), 
+//     input   .dload(dload[CPUID]),
+//     input   .ccwait(ccwait[CPUID]),
+//     input   .ccinv(ccinv[CPUID]),
+//     input   .ccsnoopaddr(ccsnoopaddr[CPUID]),
 
-    output  .dREN(dREN[CPUID]),
-    output  .dWEN(dWEN[CPUID]),
-    output  .daddr(daddr[CPUID]),
-    output  .dstore(dstore[CPUID]),
-    output  .ccwrite(ccwrite[CPUID]),
-    output  .cctrans(cctrans[CPUID])   
-);
+//     output  .dREN(dREN[CPUID]),
+//     output  .dWEN(dWEN[CPUID]),
+//     output  .daddr(daddr[CPUID]),
+//     output  .dstore(dstore[CPUID]),
+//     output  .ccwrite(ccwrite[CPUID]),
+//     output  .cctrans(cctrans[CPUID])   
+// );
 
 
 
