@@ -23,14 +23,16 @@ module icache (
    logic [IIDX_W-1:0] idx;
    logic [IBYT_W-1:0] bytoff;
    // {valid, tag 26bits, word 32 bits}
-   logic [15:0][58:0]     curr_cache, next_cache;
+   logic [15:0][58:0] curr_cache;
    int 			  i;
    logic 		  hit;
    logic 		  miss;
-
+   logic 		  valid;
+   
    // This is a cache hit
-   assign hit = (tag == curr_cache[idx][57:57-ITAG_W+1]);
+   assign hit = (tag == curr_cache[idx][57:57-ITAG_W+1]) & valid;
    assign miss = ~hit;
+   assign valid = curr_cache[idx][58];
    
 
    assign tag = dcif.imemaddr[31:31-ITAG_W+1];
@@ -47,15 +49,13 @@ module icache (
       else begin
 	 if(~ccif.iwait && miss)
 	   begin
-	      curr_cache[idx] <= next_cache[idx];
+	      curr_cache[idx] <= {1'b1, tag, ccif.iload};
 	   end
       end
    end
 
    assign ccif.iREN = (hit) ? 0 : 1;
    assign ccif.iaddr = dcif.imemaddr;
-
-   assign next_cache = {1'b1, tag, ccif.iload};
 
    assign dcif.imemload = (hit) ? curr_cache[idx][31:0] : ((~ccif.iwait) ? ccif.iload : 0);
    
