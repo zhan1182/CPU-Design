@@ -39,11 +39,16 @@ module dcache (
 
    logic 		  hit, miss;
    logic 		  update; // use for update curr_cache
+   logic [3:0] 		  curr_count, next_count; // flush count
+   logic [2:0] 		  curr_blk, next_blk;
+   logic [2:0] 		  curr_idx, next_idx; // index for flushing
+   word_t next_hitnum, curr_hitnum;
+   
    
    
 
    ///////// state machine /////////////
-   typedef enum 	  logic [2:0] {IDLE, READ1, READ2, WRITE1, WRITE2} cacheState;
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, FLUSH1, FLUSH_WAIT1, FLUSH_WAIT2, HIT_WRITE, HIT_WAIT, DONE} cacheState;
    cacheState curr_state, next_state;
 
    always_ff @ (posedge CLK, negedge nRST) begin
@@ -51,12 +56,24 @@ module dcache (
 	 curr_state <= IDLE;
 	 curr_data1 <= 0;
 	 curr_data2 <= 0;
+	 curr_count <= 4'b0001;
+	 curr_blk <= 3'b000;
+	 curr_idx <= 0;
+	 
+	 
+	 
 	 
       end
       else begin
 	 curr_state <= next_state;
 	 curr_data1 <= next_data1;
 	 curr_data2 <= next_data2;
+	 curr_count <= next_count;
+	 curr_blk <= next_blk;
+	 curr_idx <= next_idx;
+	 
+	 
+	 
 	 
       end
      
@@ -74,6 +91,11 @@ module dcache (
       ccif.dstore = 0;
       data1 = 0;
       data2 = 0;
+      next_count = curr_count;
+      next_blk = curr_blk;
+      next_idx = curr_idx;
+      
+      
       
       case(curr_state)
 	IDLE: begin
@@ -83,6 +105,10 @@ module dcache (
 	   else if(dcif.dmemWEN && miss && dirty) begin
 	      next_state = WRITE1;
 	   end
+	   else if(dcif.halt == 1) begin
+	      next_state = FLUSH1;
+	   end
+	   
 	end
 	READ1: begin
 	   if (ccif.dwait == 0) begin
@@ -157,10 +183,100 @@ module dcache (
 	   else begin
 	      next_state = WRITE2;
 	   end
+	end // case: WRITE2
+	
+ 	FLUSH1: begin
+	   if(curr_count >= 17) begin
+	      next_state = HIT_WRITE;
+	   end
+	   else if((curr_count <= 8 && curr_cache1[curr_idx][90] == 0) || (curr_count > 8 && curr_cache2[curr_idx][90] == 0))begin
+	      next_count = curr_count + 1;
+	      next_idx = curr_count == 8 ? 0:curr_idx + 1;
+	      
+	      next_state = FLUSH1;
+	      next_blk = 3'b000;
+	   end
+	   
+	   else if(curr_count <= 8 && curr_cache1[curr_idx][90] == 1 && curr_blk == 0)begin
+	      ccif.dWEN = 1;
+	      ccif.dstore = curr_cache1[curr_idx][31:0];
+	      ccif.daddr = {curr_cache1[curr_idx][89:64], curr_idx, curr_blk};
+	      //next_blk = 3'b100;
+	      next_state = FLUSH_WAIT1;
+	      
+	   end
+	   
+	   else if(curr_count <= 8 && curr_cache1[curr_idx][90] == 1 && curr_blk == 3'b100) begin
+	      ccif.dWEN = 1;
+	      ccif.dstore = curr_cache1[curr_idx][63:32];
+	      ccif.daddr = {curr_cache1[curr_idx][89:64], curr_idx, curr_blk};
+	      //next_count = curr_count + 1;
+	      //next_blk = 3'b000;
+	      next_state = FLUSH_WAIT2;
+	   end
+	   else if(curr_count > 8 && curr_cache2[curr_idx][90] == 1 && curr_blk == 0) begin
+	      ccif.dWEN = 1;
+	      ccif.dstore = curr_cache2[curr_idx][31:0];
+	      ccif.daddr = {curr_cache2[curr_idx][89:64], curr_idx, curr_blk};
+	      next_state = FLUSH_WAIT1;
+	   end
+	   else if(curr_count > 8 && curr_cache2[curr_idx][90] == 1 && curr_blk == 3'b100) begin
+	      ccif.dWEN = 1;
+	      ccif.dstore = curr_cache2[curr_idx][63:32];
+	      ccif.daddr = {curr_cache2[curr_idx][89:64], curr_idx, curr_blk};
+	      next_state = FLUSH_WAIT2;
+	   end
+	   	   
+	end // case: FLUSH1
+	
+	
+	FLUSH_WAIT1: begin
+	   if(ccif.dwait == 0)begin
+	      next_blk = 3'b100;
+	      next_state = FLUSH1;
+	   end
+	   else begin
+	      next_state = FLUSH_WAIT1;
+	   end
 	end
-	endcase
+	
+	
+	FLUSH_WAIT2: begin
+	   if(ccif.dwait == 0)begin
+	      next_blk = 3'b000;
+	      next_count = curr_count + 1;
+	      next_idx = curr_count == 8 ? 0:curr_idx + 1;
+	      
+	      next_state = FLUSH1;
+	   end
+	   else begin
+	      next_state = FLUSH_WAIT2;
+	   end
+	end // case: FLUSH_WAIT2
 
-   end
+	HIT_WRITE: begin
+	   ccif.dWEN = 1;
+	   ccif.dstore = curr_hitnum;
+	   ccif.daddr = 32'h3100;
+	   next_state = HIT_WAIT;
+	end
+	HIT_WAIT: begin
+	   if(ccif.dwait == 0)begin
+	      next_state = DONE;
+	   end
+	   else begin
+	      next_state = HIT_WAIT;
+	   end
+	end
+	DONE: begin
+	   dcif.flushed = 1;
+	end
+	
+			 
+      endcase // case (curr_state)
+      
+   end // always_comb
+   
    
 
 
@@ -178,8 +294,8 @@ module dcache (
 	 curr_used <= 0;
 	 
 	 for(i = 0; i < 16; i++)begin
-	    curr_cache1[i] <= -1;
-	    curr_cache2[i] <= -1;
+	    curr_cache1[i][91] <= 0;
+	    curr_cache2[i][91] <= 0;
      	 end	 
       end
       else begin
@@ -205,6 +321,7 @@ module dcache (
       dirty = 0;
       update = 0;
       next_used = curr_used;
+      next_hitnum = curr_hitnum;
       
       
       if (dcif.dmemREN == 1) begin
@@ -212,6 +329,8 @@ module dcache (
 	    dcif.dmemload = blkoff ? curr_cache1[idx][63:32] : curr_cache1[idx][31:0];
 	    hit = 1;
 	    next_used = 0;
+	    next_hitnum = curr_hitnum + 1;
+	    
 	    
 	 end
 	 else if (tag == curr_cache2[idx][89:89-DTAG_W+1] && curr_cache2[idx][91] == 1) begin
@@ -219,6 +338,8 @@ module dcache (
 	    dcif.dmemload = blkoff ? curr_cache2[idx][63:32] : curr_cache2[idx][31:0];
 	    hit = 1;
 	    next_used = 1;
+	    next_hitnum = curr_hitnum + 1;
+	    
 	 end
 	 else begin
 	    // read from ram
@@ -341,6 +462,8 @@ module dcache (
 	 end // if (valid == 0)
 	 else if (tag == curr_cache1[idx][89:89-DTAG_W+1]) begin
 	    hit = 1;
+	    next_hitnum = curr_hitnum + 1;
+	    
 	    next_used = 0;
 	    update = 1;
 	    next_cache1[idx][90] = 1;
@@ -357,6 +480,8 @@ module dcache (
 	 else if (tag == curr_cache2[idx][89:89-DTAG_W+1]) begin
 	    //check other table
 	    hit = 1;
+	    next_hitnum = curr_hitnum + 1;
+	    
 	    next_used = 1;
 	    update = 1;
 	    next_cache2[idx][90] = 1;
@@ -433,9 +558,6 @@ module dcache (
 	 
    end // always_comb
    
-        
-   
-	    
 
 
 
