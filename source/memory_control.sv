@@ -23,19 +23,19 @@ module memory_control (
   parameter CPUS = 1;
 
    
-   assign ccif.ramWEN = ccif.dWEN[0];
-   assign ccif.ramREN = (ccif.dREN[0] | ccif.iREN[0]) & (~ccif.dWEN[0]);
-   assign ccif.ramaddr = (ccif.dWEN[0] | ccif.dREN[0]) ? ccif.daddr[0]:ccif.iaddr[0];
+   assign ccif.ramWEN = ccif.dWEN;
+   assign ccif.ramREN = (ccif.dREN | ccif.iREN) & (~ccif.dWEN);
+   assign ccif.ramaddr = (ccif.dWEN | ccif.dREN) ? ccif.daddr:((ccif.iREN == 1)?ccif.iaddr:0);
    
 
-   assign ccif.ramstore = ccif.dstore[0];
-   assign ccif.dload[0] = ccif.ramload;
-   assign ccif.iload[0] = ccif.ramload;
+   assign ccif.ramstore = ccif.dstore;
+   assign ccif.dload = ccif.ramload;
+   assign ccif.iload = (ccif.iREN == 1) ? ccif.ramload:0;
    
    always_comb
      begin
-   	ccif.dwait[0] = 1;
-   	ccif.iwait[0] = 1;
+   	ccif.dwait = 1;
+   	ccif.iwait = 1;
 	
    	casez(ccif.ramstate)
 
@@ -47,13 +47,13 @@ module memory_control (
    	    end
    	  ACCESS:
    	    begin
-   	       if(ccif.dWEN[0] | ccif.dREN[0])
+   	       if(ccif.dWEN || ccif.dREN)
    		 begin
-   		    ccif.dwait[0] = 0;
+   		    ccif.dwait = 0;
    		 end
-   	       else
+   	       if(ccif.iREN == 1 && ccif.dREN == 0 && ccif.dWEN == 0)
    		 begin
-   		    ccif.iwait[0] = 0;
+   		    ccif.iwait = 0;
    		 end
    	    end // case: ACCESS
    	  ERROR:

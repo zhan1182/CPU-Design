@@ -34,7 +34,7 @@ module dcache (
    logic 		  curr_used, next_used;
 
    //logic [31:0]		  blk0, blk1; // the data block 0 and data block 1
-   logic [31:0] 	  data1, data2, curr_data1, next_data1, curr_data2, next_data2; // data from first and second read or write
+   logic [31:0] 	  curr_data1, next_data1, curr_data2, next_data2; // data from first and second read or write
    
 
    logic 		  hit, miss;
@@ -48,7 +48,7 @@ module dcache (
    
 
    ///////// state machine /////////////
-   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, FLUSH1, FLUSH_WAIT1, FLUSH_WAIT2, HIT_WRITE, HIT_WAIT, DONE} cacheState;
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, READ_WAIT1, READ_WAIT2, WRITE1, WRITE2, FLUSH1, FLUSH_WAIT1, FLUSH_WAIT2, HIT_WRITE, HIT_WAIT, DONE} cacheState;
    cacheState curr_state, next_state;
 
 
@@ -103,9 +103,6 @@ module dcache (
      
    end // always_ff @
 
-   assign next_data1 = (curr_state == READ1 && !ccif.dwait) ? data1 : curr_data1;
-   assign next_data2 = (curr_state == READ2 && !ccif.dwait) ? data2 : curr_data2;
-   
    
    always_comb begin
       next_state = IDLE;
@@ -113,8 +110,8 @@ module dcache (
       ccif.dWEN = 0;
       ccif.daddr = 0;
       ccif.dstore = 0;
-      data1 = 0;
-      data2 = 0;
+      next_data1 = curr_data1;
+      next_data2 = curr_data2;
       next_count = curr_count;
       next_blk = curr_blk;
       next_idx = curr_idx;
@@ -137,20 +134,24 @@ module dcache (
 	   
 	end
 	READ1: begin
+	   
+	   ccif.daddr = dcif.dmemaddr;
+	   ccif.dREN = 1;
+	   next_state = READ_WAIT1;
+	   
+	   
+	end // case: READ1
+	READ_WAIT1: begin
 	   if (ccif.dwait == 0) begin
 	      next_state = READ2;
-	      data1 = ccif.dload;
+	      next_data1 = ccif.dload;
 	      
 	   end
 	   else begin
-	      next_state = READ1;
-	      data1 = 0;
-	      
+	      next_state = READ_WAIT1;	      
 	   end
-	   ccif.daddr = dcif.dmemaddr;
-	   ccif.dREN = 1;
-	   
 	end
+	
 	READ2: begin
 	   ccif.dREN = 1;
 	   if(blkoff == 0) begin
@@ -159,16 +160,19 @@ module dcache (
 	   else begin
 	      ccif.daddr = dcif.dmemaddr - 4;
 	   end
-	   if (ccif.dwait == 0) begin
+	  
+	end // case: READ2
+	READ_WAIT2: begin
+	    if (ccif.dwait == 0) begin
 	      next_state = dirty == 0 ? IDLE : WRITE1;
-	      data2 = ccif.dload;
+	      next_data2 = ccif.dload;
 	   end
 	   else begin
-	      next_state = READ2;
-	      data2 = 0;
+	      next_state = READ_WAIT2;
 	   end
-	   
+
 	end
+	
 	WRITE1: begin
 	   ccif.dWEN = 1;
 	   ccif.daddr = dcif.dmemaddr;
@@ -359,7 +363,7 @@ module dcache (
 	    dirty = curr_used ? curr_cache1[idx][90] : curr_cache2[idx][90];
 	    valid = curr_cache1[idx][91] && curr_cache2[idx][91];
 	    
-	    if (curr_state == READ2 && !ccif.dwait && valid == 0) begin
+	    if (curr_state == READ_WAIT2 && !ccif.dwait && valid == 0) begin
 	       dcif.dmemload = curr_data1;
 	       //update = 1;
 	       dcif.dhit = 1;
@@ -387,7 +391,7 @@ module dcache (
 	       end
 	    end // if (curr_state == READ2 && !ccif.dwait && valid == 0)
 	    
-	    else if (curr_state == READ2 && !ccif.dwait && dirty == 0) begin
+	    else if (curr_state == READ_WAIT2 && !ccif.dwait && dirty == 0) begin
 	       dcif.dhit = 1;
  
 	       if (curr_used == 0) begin
