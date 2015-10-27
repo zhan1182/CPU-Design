@@ -9,8 +9,8 @@
 
 module dcache (
 	       input logic CLK, nRST,
-	       datapath_cache_if.dcache dcif,
-	       cache_control_if.dcache ccif
+	       datapath_cache_if dcif,
+	       cache_control_if ccif
 	       );
    import cpu_types_pkg::*;
 
@@ -38,7 +38,7 @@ module dcache (
    
 
    logic 		  hit, miss;
-   logic 		  update; // use for update curr_cache
+   //logic 		  update; // use for update curr_cache
    logic [3:0] 		  curr_count, next_count; // flush count
    logic [2:0] 		  curr_blk, next_blk;
    logic [2:0] 		  curr_idx, next_idx; // index for flushing
@@ -51,6 +51,26 @@ module dcache (
    typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, FLUSH1, FLUSH_WAIT1, FLUSH_WAIT2, HIT_WRITE, HIT_WAIT, DONE} cacheState;
    cacheState curr_state, next_state;
 
+
+      // check this
+   always_ff @ (posedge CLK, negedge nRST) begin
+      if (nRST == 0) begin
+	 curr_used <= 0;
+	 
+	 for(i = 0; i < 8; i++)begin
+	    curr_cache1[i] <= 0;
+	    curr_cache2[i] <= 0;
+     	 end	 
+      end
+      else begin
+	 curr_used <= next_used;
+
+	 curr_cache1 <= next_cache1;
+	 curr_cache2 <= next_cache2;
+	 
+
+      end
+   end
    always_ff @ (posedge CLK, negedge nRST) begin
       if (nRST == 0) begin
 	 curr_state <= IDLE;
@@ -59,6 +79,8 @@ module dcache (
 	 curr_count <= 4'b0001;
 	 curr_blk <= 3'b000;
 	 curr_idx <= 0;
+	 curr_hitnum <= 0;
+	 
 	 
 	 
 	 
@@ -71,6 +93,8 @@ module dcache (
 	 curr_count <= next_count;
 	 curr_blk <= next_blk;
 	 curr_idx <= next_idx;
+	 curr_hitnum <= next_hitnum;
+	 
 	 
 	 
 	 
@@ -94,6 +118,8 @@ module dcache (
       next_count = curr_count;
       next_blk = curr_blk;
       next_idx = curr_idx;
+      dcif.flushed = 0;
+      
       
       
       
@@ -288,40 +314,23 @@ module dcache (
    assign bytoff = dcif.dmemaddr[31-DTAG_W-DIDX_W-DBLK_W:0];
 
 
-   // check this
-   always_ff @ (posedge CLK, negedge nRST) begin
-      if (nRST == 0) begin
-	 curr_used <= 0;
-	 
-	 for(i = 0; i < 16; i++)begin
-	    curr_cache1[i][91] <= 0;
-	    curr_cache2[i][91] <= 0;
-     	 end	 
-      end
-      else begin
-	 curr_used <= next_used;
-	 
-	 if (update) begin
-	    curr_cache1[idx] <= next_cache1[idx];
-	    curr_cache2[idx] <= next_cache2[idx];
-	 end
-	 
 
-      end
-   end
    
 
    
    always_comb begin
       hit = 0;
       miss = 0;
-      next_cache1[idx] = curr_cache1[idx];
-      next_cache2[idx] = curr_cache2[idx];
+      next_cache1 = curr_cache1;
+      next_cache2 = curr_cache2;
       dcif.dmemload = 0;
       dirty = 0;
-      update = 0;
+      //update = 0;
       next_used = curr_used;
       next_hitnum = curr_hitnum;
+      dcif.dhit = 0;
+      valid = 0;
+      
       
       
       if (dcif.dmemREN == 1) begin
@@ -330,6 +339,8 @@ module dcache (
 	    hit = 1;
 	    next_used = 0;
 	    next_hitnum = curr_hitnum + 1;
+	    dcif.dhit = 1;
+	    
 	    
 	    
 	 end
@@ -339,6 +350,7 @@ module dcache (
 	    hit = 1;
 	    next_used = 1;
 	    next_hitnum = curr_hitnum + 1;
+	    dcif.dhit = 1;
 	    
 	 end
 	 else begin
@@ -349,7 +361,9 @@ module dcache (
 	    
 	    if (curr_state == READ2 && !ccif.dwait && valid == 0) begin
 	       dcif.dmemload = curr_data1;
-	       update = 1;
+	       //update = 1;
+	       dcif.dhit = 1;
+	       
 	       if (curr_cache1[idx][91] == 0) begin
 		  // cache 1 invalid, empty
 		  next_used = 0;
@@ -359,7 +373,7 @@ module dcache (
 		  else begin
 		     next_cache1[idx] = {1'b1, 1'b0, tag, curr_data1, next_data2};
 		  end
-
+		  
 	       end
 	       else if (curr_cache2[idx][91] == 0) begin
 		  if (blkoff == 0) begin
@@ -374,7 +388,8 @@ module dcache (
 	    end // if (curr_state == READ2 && !ccif.dwait && valid == 0)
 	    
 	    else if (curr_state == READ2 && !ccif.dwait && dirty == 0) begin
-	       	       	       
+	       dcif.dhit = 1;
+ 
 	       if (curr_used == 0) begin
 		  next_used = 1;
 		  
@@ -400,6 +415,8 @@ module dcache (
 	    end // if (curr_state == READ2 && !ccif.dwait && dirty == 0)
 	    
 	    else if (curr_state == WRITE2 && !ccif.dwait && dirty == 1) begin
+	       dcif.dhit = 1;
+	       
 	       if (curr_used == 0) begin
 		  next_used = 1;
 		  
@@ -423,18 +440,20 @@ module dcache (
 		  end
 	       end // else: !if(used == 0)
 	       dcif.dmemload = curr_data1;
-	       update = 1;
+	       //update = 1;
 	    end // if (curr_state = WRITE2 && !ccif.dwait && dirty == 1)
 	 end // else: !if(tag == curr_cache2[idx][89:89-DTAG_W+1] && curr_cache2[idx][91] == 1)
       end // if (dcif.dmemREN == 1)
       else if (dcif.dmemWEN == 1) begin
 	 valid = curr_cache1[idx][91] && curr_cache2[idx][91];
 	 if (valid == 0) begin
-	    update = 1;
-	    
+	    //update = 1;
+	    dcif.dhit = 1;
 	    if (curr_cache1[idx][91] == 0) begin
 	       // cache 1 invalid, empty
 	       next_used = 0;
+	       
+	       
 	       next_cache1[idx][90] = 1;
 	       next_cache1[idx][91] = 1;
 	       
@@ -465,7 +484,9 @@ module dcache (
 	    next_hitnum = curr_hitnum + 1;
 	    
 	    next_used = 0;
-	    update = 1;
+	    //update = 1;
+	    dcif.dhit = 1;
+	    
 	    next_cache1[idx][90] = 1;
 	    
 	    if (blkoff == 1) begin
@@ -483,7 +504,9 @@ module dcache (
 	    next_hitnum = curr_hitnum + 1;
 	    
 	    next_used = 1;
-	    update = 1;
+	    //update = 1;
+	    dcif.dhit = 1;
+	    
 	    next_cache2[idx][90] = 1;
 	    
 	    if (blkoff == 1) begin
@@ -501,8 +524,9 @@ module dcache (
 	    if (dirty == 0) begin
 	       if(curr_used == 0)begin
 		  next_cache2[idx][90] = 1;
-		  update = 1;
+		  //update = 1;
 		  next_cache2[idx][89:64] = tag;
+		  dcif.dhit = 1;
 		  
 		  if (blkoff == 1) begin
 		     next_cache2[idx][63:32] = dcif.dmemstore;
@@ -513,7 +537,9 @@ module dcache (
 	       end // if (used == 0)
 	       else begin
 		  next_cache1[idx][90] = 1;
-		  update = 1;
+		  //update = 1;
+		  dcif.dhit = 1;
+		  
 		  next_cache2[idx][89:64] = tag;
 		  if (blkoff == 1) begin
 		     next_cache1[idx][63:32] = dcif.dmemstore;
@@ -526,9 +552,11 @@ module dcache (
 	    else begin
 	       // miss = 1, dirty = 1, goto WRITE1, write old into ram, overwrite new to cache
 	       if (curr_state == WRITE2 && !ccif.dwait) begin
+		  dcif.dhit = 1;
+		  
 		  if(curr_used == 0)begin
 		     next_cache2[idx][90] = 1;
-		     update = 1;
+		     //update = 1;
 		     next_cache2[idx][89:64] = tag;
 		     if (blkoff == 1) begin
 			next_cache2[idx][63:32] = dcif.dmemstore;
@@ -539,7 +567,7 @@ module dcache (
 		  end // if (used == 0)
 		  else begin
 		     next_cache1[idx][90] = 1;
-		     update = 1;
+		     //update = 1;
 		     next_cache2[idx][89:64] = tag;
 		     if (blkoff == 1) begin
 			next_cache1[idx][63:32] = dcif.dmemstore;
