@@ -20,8 +20,8 @@ module dcache (
    logic [7:0][91:0]  curr_cache1, next_cache1;
 
    // Index and block offset used to flush cache0 and cache1
-   logic [DIDX_W-1:0] curr_idx0, next_idx0;
-   logic [DIDX_W-1:0] curr_idx1, next_idx1;
+   logic [DIDX_W:0] curr_idx0, next_idx0;
+   logic [DIDX_W:0] curr_idx1, next_idx1;
    logic [DBLK_W-1:0] curr_blkoff0, next_blkoff0;
    logic [DBLK_W-1:0] curr_blkoff1, next_blkoff1;
 
@@ -96,10 +96,10 @@ module dcache (
 	     curr_used <= next_used;
 	     
 	     curr_idx0 <= next_idx0;
-	     curr_blkoff0 <= next_idx0;
+	     curr_blkoff0 <= next_blkoff0;
 	     
 	     curr_idx1 <= next_idx1;
-	     curr_blkoff1 <= next_idx1;
+	     curr_blkoff1 <= next_blkoff1;
 	     
 	     curr_cache0 <= next_cache0;
 	     curr_cache1 <= next_cache1;
@@ -125,17 +125,17 @@ module dcache (
 	case(curr_state)
 	  IDLE:
 	    begin
-	       if(miss && dirty && valid) 
+	       if(dcif.halt == 1) 
+		 begin
+		    next_state = FLUSH0;
+		 end
+	       else if(miss && dirty && valid) 
 		 begin
 		    next_state = WRITE1;
 		 end
 	       else if(miss && dirty == 0 && dcif.dmemREN)
 		 begin
 		    next_state = READ1;
-		 end
-	       else if(dcif.halt == 1) 
-		 begin
-		    next_state = FLUSH0;
 		 end
 	    end
 	  READ1:
@@ -186,9 +186,10 @@ module dcache (
 	    end
 	  HIT_WRITE:// Write number of hit to ram
 	    begin
-	       if(ccif.dwait == 0)begin
-	       	  next_state = HIT_DONE;
-	       end
+	       if(ccif.dwait == 0)
+		 begin
+	       	    next_state = HIT_DONE;
+		 end
 	    end
 	  HIT_DONE:
 	    begin
@@ -534,7 +535,6 @@ module dcache (
 	    end
 	  HIT_DONE:
 	    begin
-	       // Do nothing
 	    end
 	  DONE: 
 	    begin
