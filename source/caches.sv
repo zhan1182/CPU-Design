@@ -20,7 +20,7 @@ module caches (
   dcache  DCACHE (CLK, nRST, dcif, ccif);
 
   // dcache invalidate before halt handled by dcache when exists
-  assign dcif.flushed = dcif.halt;
+  //assign dcif.flushed = dcif.halt;
 
   //singlecycle
   //assign dcif.ihit = (dcif.imemREN) ? ~ccif.iwait : 0;
