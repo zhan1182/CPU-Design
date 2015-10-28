@@ -38,7 +38,7 @@ module dcache (
    logic 		  hit0, hit1, hit, miss;
 
    // Define state machine
-   typedef enum 	  logic [3:0] {IDLE, READ1, READ1_DONE, READ2, READ2_DONE, WRITE1, WRITE2, WRITE_DONE, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, WRITE_DONE, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
    
    cacheState curr_state, next_state;
 
@@ -142,24 +142,16 @@ module dcache (
 	    begin
 	       if (ccif.dwait == 0) 
 		 begin
-		    next_state = READ1_DONE;
+		    next_state = READ2;
 		 end
-	    end
-	  READ1_DONE:
-	    begin
-	       next_state = READ2;
 	    end
 	  READ2:
 	    begin
 	       if (ccif.dwait == 0) 
 		 begin
-		    next_state = READ2_DONE;
+		    next_state = IDLE;
 		 end
 	    end
-	  READ2_DONE:
-	    begin
-	       next_state = IDLE;
-	    end // case: READ2_DONE
 	  WRITE1:
 	    begin
 	       if (ccif.dwait == 0) 
@@ -327,98 +319,93 @@ module dcache (
 	    begin
 	       ccif.dREN = 1;
 	       ccif.daddr = dcif.dmemaddr;
-	    end
-	  READ1_DONE:
-	    begin
-	       // Keep the ram read enable
-	       ccif.dREN = 1;
-	       
-	       // dcif.dmemload = ccif.dload;
-	       if(curr_used)
+
+	       if(ccif.dwait == 0)
 		 begin
-		    next_cache1[info.idx][91] = 1;
-		    next_cache1[info.idx][90] = 0;
-		    next_cache1[info.idx][89:64] = info.tag;
-		    
-		    if(info.blkoff)
+		    // dcif.dmemload = ccif.dload;
+		    if(curr_used)
 		      begin
-			 next_cache1[info.idx][63:32] = ccif.dload;
-		      end
+			 next_cache1[info.idx][91] = 1;
+			 next_cache1[info.idx][90] = 0;
+			 next_cache1[info.idx][89:64] = info.tag;
+			 
+			 if(info.blkoff)
+			   begin
+			      next_cache1[info.idx][63:32] = ccif.dload;
+			   end
+			 else
+			   begin
+			      next_cache1[info.idx][31:0] = ccif.dload;
+			   end
+		      end // if (curr_used)
 		    else
 		      begin
-			 next_cache1[info.idx][31:0] = ccif.dload;
-		      end
-		 end // if (curr_used)
-	       else
-		 begin
-		    next_cache0[info.idx][91] = 1;
-		    next_cache0[info.idx][90] = 0;
-		    next_cache0[info.idx][89:64] = info.tag;
-		    
-		    if(info.blkoff)
-		      begin
-			 next_cache0[info.idx][63:32] = ccif.dload;
-		      end
-		    else
-		      begin
-			 next_cache0[info.idx][31:0] = ccif.dload;
-		      end
-		 end // else: !if(curr_used)
+			 next_cache0[info.idx][91] = 1;
+			 next_cache0[info.idx][90] = 0;
+			 next_cache0[info.idx][89:64] = info.tag;
+			 
+			 if(info.blkoff)
+			   begin
+			      next_cache0[info.idx][63:32] = ccif.dload;
+			   end
+			 else
+			   begin
+			      next_cache0[info.idx][31:0] = ccif.dload;
+			   end
+		      end // else: !if(curr_used)
+		 end
 	    end
 	  READ2:
 	    begin
 	       ccif.dREN = 1;
 	       ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
+	       if(ccif.dwait == 0)
+		 begin
+		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+	       
+		    if(curr_used)
+		      begin
+			 // Update the next_used
+			 next_used = 0;
+			 
+			 next_cache1[info.idx][91] = 1;
+			 next_cache1[info.idx][90] = 0;
+			 next_cache1[info.idx][89:64] = info.tag;
+			 
+			 if(info.blkoff)
+			   begin
+			      next_cache1[info.idx][31:0] = ccif.dload;
+			      // Give the data to datapaht
+			      dcif.dmemload = curr_cache1[info.idx][63:32];
+			   end
+			 else
+			   begin
+			      next_cache1[info.idx][63:32] = ccif.dload;
+			      dcif.dmemload = curr_cache1[info.idx][31:0];
+			   end
+		      end // if (curr_used)
+		    else
+		      begin
+			 // Update the next_used
+			 next_used = 1;
+		    
+			 next_cache0[info.idx][91] = 1;
+			 next_cache0[info.idx][90] = 0;
+			 next_cache0[info.idx][89:64] = info.tag;
+			 
+			 if(info.blkoff)
+			   begin
+			      next_cache0[info.idx][31:0] = ccif.dload;
+			      dcif.dmemload = curr_cache0[info.idx][63:32];
+			   end
+			 else
+			   begin
+			      next_cache0[info.idx][63:32] = ccif.dload;
+			      dcif.dmemload = curr_cache0[info.idx][31:0];
+			   end
+		      end // else: !if(curr_used)	       
+		 end
 	    end
-	  READ2_DONE:
-	    begin
-	       // Keep the ram read enable
-	       ccif.dREN = 1;
-	       
-	       dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-	       
-	       if(curr_used)
-		 begin
-		    // Update the next_used
-		    next_used = 0;
-		    
-		    next_cache1[info.idx][91] = 1;
-		    next_cache1[info.idx][90] = 0;
-		    next_cache1[info.idx][89:64] = info.tag;
-		    
-		    if(info.blkoff)
-		      begin
-			 next_cache1[info.idx][31:0] = ccif.dload;
-			 // Give the data to datapaht
-			 dcif.dmemload = curr_cache1[info.idx][63:32];
-		      end
-		    else
-		      begin
-			 next_cache1[info.idx][63:32] = ccif.dload;
-			 dcif.dmemload = curr_cache1[info.idx][31:0];
-		      end
-		 end // if (curr_used)
-	       else
-		 begin
-		    // Update the next_used
-		    next_used = 1;
-		    
-		    next_cache0[info.idx][91] = 1;
-		    next_cache0[info.idx][90] = 0;
-		    next_cache0[info.idx][89:64] = info.tag;
-		    
-		    if(info.blkoff)
-		      begin
-			 next_cache0[info.idx][31:0] = ccif.dload;
-			 dcif.dmemload = curr_cache0[info.idx][63:32];
-		      end
-		    else
-		      begin
-			 next_cache0[info.idx][63:32] = ccif.dload;
-			 dcif.dmemload = curr_cache0[info.idx][31:0];
-		      end
-		 end // else: !if(curr_used)	       
-	    end // case: READ2_DONE
 	  WRITE1:
 	    begin
 	       // Turn on MEM write enable
