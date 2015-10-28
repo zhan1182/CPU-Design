@@ -7,7 +7,7 @@
 
 `include "cpu_types_pkg.vh"
 
-module dcache (
+module dcache_bak (
 	       input logic CLK, nRST,
 	       datapath_cache_if dcif,
 	       cache_control_if ccif
@@ -65,8 +65,8 @@ module dcache (
       else begin
 	 curr_used <= next_used;
 
-	 curr_cache1 <= next_cache1;
-	 curr_cache2 <= next_cache2;
+	 curr_cache1[idx] <= next_cache1[idx];
+	 curr_cache2[idx] <= next_cache2[idx];
 	 
 
       end
@@ -115,7 +115,7 @@ module dcache (
    
    
    always_comb begin
-      next_state = IDLE;
+      next_state = curr_state;
       /*
       ccif.dREN = 0;
       ccif.dWEN = 0;*/
@@ -333,17 +333,17 @@ module dcache (
 
    
    always_comb begin
-      // hit = 0;
-      // miss = 0;
-      // next_cache1 = curr_cache1;
-      // next_cache2 = curr_cache2;
-      // dcif.dmemload = 0;
-      // dirty = 0;
-      // //update = 0;
-      // next_used = curr_used;
-      // next_hitnum = curr_hitnum;
-      // dcif.dhit = 0;
-      // valid = 0;
+      hit = 0;
+      miss = 0;
+      next_cache1 = curr_cache1;
+      next_cache2 = curr_cache2;
+      dcif.dmemload = 0;
+      dirty = 0;
+      //update = 0;
+      next_used = curr_used;
+      next_hitnum = curr_hitnum;
+      dcif.dhit = 0;
+      valid = 0;
       
       
       
@@ -351,7 +351,7 @@ module dcache (
 	 if (tag == curr_cache1[idx][89:89-DTAG_W+1] && curr_cache1[idx][91] == 1) begin
 	    dcif.dmemload = blkoff ? curr_cache1[idx][63:32] : curr_cache1[idx][31:0];
 	    hit = 1;
-	    next_used = 0;
+	    // next_used = 0;
 	    next_hitnum = curr_hitnum + 1;
 	    dcif.dhit = 1;
 	    
@@ -362,7 +362,7 @@ module dcache (
 	    //check other table
 	    dcif.dmemload = blkoff ? curr_cache2[idx][63:32] : curr_cache2[idx][31:0];
 	    hit = 1;
-	    next_used = 1;
+	    // next_used = 1;
 	    next_hitnum = curr_hitnum + 1;
 	    dcif.dhit = 1;
 	    
@@ -372,7 +372,7 @@ module dcache (
 	    // read from ram
 	    miss = 1;
 	    dirty = curr_used ? curr_cache1[idx][90] : curr_cache2[idx][90];
-	    valid = curr_cache1[idx][91] && curr_cache2[idx][91];
+	    valid = curr_used ? curr_cache1[idx][91] : curr_cache2[idx][91];
 	    
 	    if (curr_state == READ2 && !ccif.dwait && valid == 0) begin
 	       dcif.dmemload = curr_data1;
