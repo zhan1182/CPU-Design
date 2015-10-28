@@ -107,14 +107,18 @@ module dcache (
    assign ccif.dREN = (curr_state == READ1 || curr_state == READ2) ? 1:0;
    
    assign ccif.dWEN = (curr_state == WRITE1 || curr_state == WRITE2) ? 1 : ((curr_state == FLUSH1 && curr_count < 17 && (curr_cache1[curr_idx][90] == 1 || curr_cache2[curr_idx][90] == 1)) ? 1 : ((curr_state == HIT_WRITE) ? 1:0));
-   
-   assign ccif.daddr = (curr_state == READ1 || curr_state == WRITE1) ? dcif.dmemaddr : ((curr_state == READ2 || curr_state == WRITE2) ? ((blkoff)?dcif.dmemaddr - 4:dcif.dmemaddr + 4) : ((curr_state == FLUSH1 && curr_count < 17 && (curr_cache1[curr_idx][90] == 1 || curr_cache2[curr_idx][90] == 1)) ? ((curr_count <= 8 && curr_cache1[curr_idx][90] == 1) ? {curr_cache1[curr_idx][89:64], curr_idx, curr_blk} : (curr_count > 8 && curr_cache2[curr_idx][90] == 1) ? {curr_cache2[curr_idx][89:64], curr_idx, curr_blk} : ((curr_state == HIT_WRITE) ? 32'h3100 : 0))));
+
+   /*assign ccif.daddr = (curr_state == READ1 || curr_state == WRITE1) ? dcif.dmemaddr : 
+		       ((curr_state == READ2 || curr_state == WRITE2) ? ((blkoff)?dcif.dmemaddr - 4:dcif.dmemaddr + 4) : 
+			((curr_state == FLUSH1 && curr_count < 17 && (curr_cache1[curr_idx][90] == 1 || curr_cache2[curr_idx][90] == 1)) ? ((curr_count <= 8 && curr_cache1[curr_idx][90] == 1) ? {curr_cache1[curr_idx][89:64], curr_idx, curr_blk} :
+																	    (curr_count > 8 && curr_cache2[curr_idx][90] == 1) ? {curr_cache2[curr_idx][89:64], curr_idx, curr_blk} : ((curr_state == HIT_WRITE) ? 32'h3100 : 0))));*/
    
    
    always_comb begin
       next_state = IDLE;
+      /*
       ccif.dREN = 0;
-      ccif.dWEN = 0;
+      ccif.dWEN = 0;*/
       ccif.daddr = 0;
       ccif.dstore = 0;
       next_data1 = curr_data1;
@@ -142,7 +146,7 @@ module dcache (
 	end
 	READ1: begin
 	   ccif.daddr = dcif.dmemaddr;
-	   ccif.dREN = 1;
+	   //ccif.dREN = 1;
 	   
 	   //next_state = READ_WAIT1;
 	   
@@ -158,15 +162,15 @@ module dcache (
 	end // case: READ1
 
 	READ2: begin
-	   ccif.dREN = 1;
-	   /*
+	   //ccif.dREN = 1;
+	   
 	   if(blkoff == 0) begin
 	      ccif.daddr = dcif.dmemaddr + 4;
 	   end
 	   else begin
 	      ccif.daddr = dcif.dmemaddr - 4;
-	   end*/
-	   ccif.daddr = dcif.dmemaddr;
+	   end
+	   //ccif.daddr = dcif.dmemaddr;
 	   
 	   
 	   if (ccif.dwait == 0) begin
@@ -180,7 +184,7 @@ module dcache (
 	end // case: READ2
 	
 	WRITE1: begin
-	   ccif.dWEN = 1;
+	   //ccif.dWEN = 1;
 	   ccif.daddr = dcif.dmemaddr;
 	   if (curr_used == 0)begin
 	      ccif.dstore = blkoff ? curr_cache2[idx][63:32] : curr_cache2[idx][31:0];
@@ -199,7 +203,7 @@ module dcache (
 	   
 	end
 	WRITE2: begin
-	   ccif.dWEN = 1;
+	   //ccif.dWEN = 1;
 	   if(blkoff == 0) begin
 	      ccif.daddr = dcif.dmemaddr + 4;
 	   end
@@ -234,16 +238,16 @@ module dcache (
 	   end
 	   
 	   else if(curr_count <= 8 && curr_cache1[curr_idx][90] == 1 && curr_blk == 0)begin
-	      ccif.dWEN = 1;
+	      //ccif.dWEN = 1;
 	      ccif.dstore = curr_cache1[curr_idx][31:0];
-	      ccif.daddr = {curr_cache1[curr_idx][89:64], curr_idx, curr_blk};
+	      //ccif.daddr = {curr_cache1[curr_idx][89:64], curr_idx, curr_blk};
 	      //next_blk = 3'b100;
 	      next_state = FLUSH_WAIT1;
 	      
 	   end
 	   
 	   else if(curr_count <= 8 && curr_cache1[curr_idx][90] == 1 && curr_blk == 3'b100) begin
-	      ccif.dWEN = 1;
+	      //ccif.dWEN = 1;
 	      ccif.dstore = curr_cache1[curr_idx][63:32];
 	      ccif.daddr = {curr_cache1[curr_idx][89:64], curr_idx, curr_blk};
 	      //next_count = curr_count + 1;
@@ -251,13 +255,13 @@ module dcache (
 	      next_state = FLUSH_WAIT2;
 	   end
 	   else if(curr_count > 8 && curr_cache2[curr_idx][90] == 1 && curr_blk == 0) begin
-	      ccif.dWEN = 1;
+	      //ccif.dWEN = 1;
 	      ccif.dstore = curr_cache2[curr_idx][31:0];
 	      ccif.daddr = {curr_cache2[curr_idx][89:64], curr_idx, curr_blk};
 	      next_state = FLUSH_WAIT1;
 	   end
 	   else if(curr_count > 8 && curr_cache2[curr_idx][90] == 1 && curr_blk == 3'b100) begin
-	      ccif.dWEN = 1;
+	      //ccif.dWEN = 1;
 	      ccif.dstore = curr_cache2[curr_idx][63:32];
 	      ccif.daddr = {curr_cache2[curr_idx][89:64], curr_idx, curr_blk};
 	      next_state = FLUSH_WAIT2;
@@ -291,7 +295,7 @@ module dcache (
 	end // case: FLUSH_WAIT2
 
 	HIT_WRITE: begin
-	   ccif.dWEN = 1;
+	   //ccif.dWEN = 1;
 	   ccif.dstore = curr_hitnum;
 	   ccif.daddr = 32'h3100;
 	   next_state = HIT_WAIT;
@@ -321,7 +325,7 @@ module dcache (
    assign tag = dcif.dmemaddr[31:31-DTAG_W+1];
    assign idx = dcif.dmemaddr[31-DTAG_W:31-DTAG_W-DIDX_W+1];
    assign blkoff = dcif.dmemaddr[31-DTAG_W-DIDX_W:31-DTAG_W-DIDX_W-DBLK_W+1];
-   assign bytoff = dcif.dmemaddr[31-DTAG_W-DIDX_W-DBLK_W:0];
+   //assign bytoff = dcif.dmemaddr[31-DTAG_W-DIDX_W-DBLK_W:0];
 
 
 
