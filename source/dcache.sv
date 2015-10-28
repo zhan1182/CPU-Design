@@ -333,17 +333,17 @@ module dcache (
 
    
    always_comb begin
-      hit = 0;
-      miss = 0;
-      next_cache1 = curr_cache1;
-      next_cache2 = curr_cache2;
-      dcif.dmemload = 0;
-      dirty = 0;
-      //update = 0;
-      next_used = curr_used;
-      next_hitnum = curr_hitnum;
-      dcif.dhit = 0;
-      valid = 0;
+      // hit = 0;
+      // miss = 0;
+      // next_cache1 = curr_cache1;
+      // next_cache2 = curr_cache2;
+      // dcif.dmemload = 0;
+      // dirty = 0;
+      // //update = 0;
+      // next_used = curr_used;
+      // next_hitnum = curr_hitnum;
+      // dcif.dhit = 0;
+      // valid = 0;
       
       
       
