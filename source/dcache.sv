@@ -186,6 +186,7 @@ module dcache (
 	
 	dcif.dmemload = 0;
 	dcif.dhit = 0;
+	dcif.flushed = 0;
 	
 	next_used = curr_used;
 	next_cache0 = curr_cache0;
