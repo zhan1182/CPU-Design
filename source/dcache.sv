@@ -149,15 +149,15 @@ module dcache (
 	    begin
 	       if (ccif.dwait == 0) 
 		 begin
-		    next_state = READ_DONE;
+		    next_state = IDLE;
 		 end
 	    end
-	  READ_DONE:
-	    begin
-	       next_state = IDLE;
+	  // READ_DONE:
+	  //   begin
+	  //      next_state = IDLE;
 	       
 
-	    end
+	  //   end
 	  
 	  WRITE1:
 	    begin
@@ -377,7 +377,7 @@ module dcache (
 			 next_used = 0;
 			 
 			 next_cache1[info.idx][91] = 1;
-			 next_cache1[info.idx][90] = 0;
+			 next_cache1[info.idx][90] = dcif.dmemWEN ? 1:0;
 			 next_cache1[info.idx][89:64] = info.tag;
 			 
 			 if(info.blkoff)
@@ -385,9 +385,13 @@ module dcache (
 			      next_cache1[info.idx][31:0] = ccif.dload;
 			      // Give the data to datapaht
 			      dcif.dmemload = curr_cache1[info.idx][63:32];
+			      next_cache1[info.idx][63:32] = dcif.dmemWEN ? dcif.dmemstore : curr_cache1[info.idx][63:32];
+			      
 			   end
 			 else
 			   begin
+			      next_cache1[info.idx][31:0] = dcif.dmemWEN ? dcif.dmemstore : curr_cache1[info.idx][31:0];
+			      
 			      next_cache1[info.idx][63:32] = ccif.dload;
 			      dcif.dmemload = curr_cache1[info.idx][31:0];
 			   end
@@ -398,68 +402,71 @@ module dcache (
 			 next_used = 1;
 		    
 			 next_cache0[info.idx][91] = 1;
-			 next_cache0[info.idx][90] = 0;
+			 next_cache0[info.idx][90] = dcif.dmemWEN ? 1:0;
 			 next_cache0[info.idx][89:64] = info.tag;
 			 
 			 if(info.blkoff)
 			   begin
 			      next_cache0[info.idx][31:0] = ccif.dload;
 			      dcif.dmemload = curr_cache0[info.idx][63:32];
+			      next_cache0[info.idx][63:32] = dcif.dmemWEN ? dcif.dmemstore : curr_cache0[info.idx][63:32];
 			   end
 			 else
 			   begin
 			      next_cache0[info.idx][63:32] = ccif.dload;
 			      dcif.dmemload = curr_cache0[info.idx][31:0];
+			      next_cache0[info.idx][31:0] = dcif.dmemWEN ? dcif.dmemstore : curr_cache0[info.idx][31:0];
 			   end
-		      end // else: !if(curr_used)	       
+		      end // else: !if(curr_used)
+
 		 end // if (ccif.dwait == 0)
 	       
 	    end // case: READ2
-	  READ_DONE:
-	    begin
-	       if(dcif.dmemWEN)
-		 begin
+	  // READ_DONE:
+	  //   begin
+	  //      if(dcif.dmemWEN)
+	  // 	 begin
 
-		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+	  // 	    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 		    
-		    if(curr_used)
-		      begin
-			 // Update the next use cache
-			 next_used = 0;
+	  // 	    if(curr_used)
+	  // 	      begin
+	  // 		 // Update the next use cache
+	  // 		 next_used = 0;
 			 
-			 next_cache1[info.idx][91] = 1;// valid = 0
-			 next_cache1[info.idx][90] = 1;// ditry = 1
-			 next_cache1[info.idx][89:64] = info.tag;
+	  // 		 next_cache1[info.idx][91] = 1;// valid = 0
+	  // 		 next_cache1[info.idx][90] = 1;// ditry = 1
+	  // 		 next_cache1[info.idx][89:64] = info.tag;
 			 
-			 if(info.blkoff == 0)
-			   begin
-			      next_cache1[info.idx][31:0] = dcif.dmemstore;
-			   end
-			 else
-			   begin
-			      next_cache1[info.idx][63:32] = dcif.dmemstore;
-			   end
-		      end // if (curr_used)
-		    else
-		      begin
-			 // Update the next use cache
-			 next_used = 1;
+	  // 		 if(info.blkoff == 0)
+	  // 		   begin
+	  // 		      next_cache1[info.idx][31:0] = dcif.dmemstore;
+	  // 		   end
+	  // 		 else
+	  // 		   begin
+	  // 		      next_cache1[info.idx][63:32] = dcif.dmemstore;
+	  // 		   end
+	  // 	      end // if (curr_used)
+	  // 	    else
+	  // 	      begin
+	  // 		 // Update the next use cache
+	  // 		 next_used = 1;
 			 
-			 next_cache0[info.idx][91] = 1;// valid = 0
-			 next_cache0[info.idx][90] = 1;// ditry = 1
-			 next_cache0[info.idx][89:64] = info.tag;
+	  // 		 next_cache0[info.idx][91] = 1;// valid = 0
+	  // 		 next_cache0[info.idx][90] = 1;// ditry = 1
+	  // 		 next_cache0[info.idx][89:64] = info.tag;
 			 
-			 if(info.blkoff == 0)
-			   begin
-			      next_cache0[info.idx][31:0] = dcif.dmemstore;
-			   end
-			 else
-			   begin
-			      next_cache0[info.idx][63:32] = dcif.dmemstore;
-			   end
-		      end
-		 end // if (dcif.dmemWEN)
-	    end
+	  // 		 if(info.blkoff == 0)
+	  // 		   begin
+	  // 		      next_cache0[info.idx][31:0] = dcif.dmemstore;
+	  // 		   end
+	  // 		 else
+	  // 		   begin
+	  // 		      next_cache0[info.idx][63:32] = dcif.dmemstore;
+	  // 		   end
+	  // 	      end
+	  // 	 end // if (dcif.dmemWEN)
+	  //   end
 	  
 	  WRITE1:
 	    begin
