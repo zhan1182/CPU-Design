@@ -38,7 +38,7 @@ module dcache (
    logic 		  hit0, hit1, hit, miss;
 
    // Define state machine
-   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, WRITE_DONE, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, READ_DONE, WRITE1, WRITE2, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
    
    cacheState curr_state, next_state;
 
@@ -133,7 +133,7 @@ module dcache (
 		 begin
 		    next_state = WRITE1;
 		 end
-	       else if(miss && dirty == 0 && dcif.dmemREN)
+	       else if(miss && dirty == 0 && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = READ1;
 		 end
@@ -149,9 +149,16 @@ module dcache (
 	    begin
 	       if (ccif.dwait == 0) 
 		 begin
-		    next_state = IDLE;
+		    next_state = READ_DONE;
 		 end
 	    end
+	  READ_DONE:
+	    begin
+	       next_state = IDLE;
+	       
+
+	    end
+	  
 	  WRITE1:
 	    begin
 	       if (ccif.dwait == 0) 
@@ -163,13 +170,13 @@ module dcache (
 	    begin
 	       if (ccif.dwait == 0) 
 		 begin
-		    next_state = WRITE_DONE;
+		    next_state = (dcif.dmemREN || dcif.dmemWEN) ? READ1:IDLE;
 		 end
 	    end
-	  WRITE_DONE:
-	    begin
-	       next_state = dcif.dmemREN ? READ1 : IDLE;
-	    end
+	  // WRITE_DONE:
+	  //   begin
+	  //      next_state = (dcif.dmemREN || dcif.dmemWEN) ? READ1:IDLE;
+	  //   end
 	  FLUSH0:// Write dirty data from the first cache to ram
 	    begin
 	       if(cache0_done)
@@ -363,7 +370,7 @@ module dcache (
 	       if(ccif.dwait == 0)
 		 begin
 		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-	       
+		    
 		    if(curr_used)
 		      begin
 			 // Update the next_used
@@ -405,40 +412,10 @@ module dcache (
 			      dcif.dmemload = curr_cache0[info.idx][31:0];
 			   end
 		      end // else: !if(curr_used)	       
-		 end
-	    end
-	  WRITE1:
-	    begin
-	       // Turn on MEM write enable
-	       ccif.dWEN = 1;
-	       ccif.daddr = dcif.dmemaddr;
-	       if (curr_used)
-		 begin
-		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
-		 end
-	       else 
-		 begin
-		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
-		 end
-	    end
-	  WRITE2:
-	    begin
-	       ccif.dWEN = 1;
-
-	       // Calculate the data address
-	       ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
+		 end // if (ccif.dwait == 0)
 	       
-	       if (curr_used)
-		 begin
-		    // Give the data to mem. The data is from datapath
-		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];
-		 end
-	       else 
-		 begin
-		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][31:0] : curr_cache0[info.idx][63:32];
-		 end
-	    end // case: WRITE2
-	  WRITE_DONE:
+	    end // case: READ2
+	  READ_DONE:
 	    begin
 	       if(dcif.dmemWEN)
 		 begin
@@ -483,6 +460,83 @@ module dcache (
 		      end
 		 end // if (dcif.dmemWEN)
 	    end
+	  
+	  WRITE1:
+	    begin
+	       // Turn on MEM write enable
+	       ccif.dWEN = 1;
+	       ccif.daddr = dcif.dmemaddr;
+	       if (curr_used)
+		 begin
+		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
+		 end
+	       else 
+		 begin
+		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
+		 end
+	    end
+	  WRITE2:
+	    begin
+	       ccif.dWEN = 1;
+
+	       // Calculate the data address
+	       ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
+	       
+	       if (curr_used)
+		 begin
+		    // Give the data to mem. The data is from datapath
+		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];
+		 end
+	       else 
+		 begin
+		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][31:0] : curr_cache0[info.idx][63:32];
+		 end
+	    end // case: WRITE2
+	  // WRITE_DONE:
+	  //   begin
+	  //      // if(dcif.dmemWEN)
+	  //      // 	 begin
+
+	  //      // 	    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+		    
+	  //      // 	    if(curr_used)
+	  //      // 	      begin
+	  //      // 		 // Update the next use cache
+	  //      // 		 next_used = 0;
+			 
+	  //      // 		 next_cache1[info.idx][91] = 1;// valid = 0
+	  //      // 		 next_cache1[info.idx][90] = 1;// ditry = 1
+	  //      // 		 next_cache1[info.idx][89:64] = info.tag;
+			 
+	  //      // 		 if(info.blkoff == 0)
+	  //      // 		   begin
+	  //      // 		      next_cache1[info.idx][31:0] = dcif.dmemstore;
+	  //      // 		   end
+	  //      // 		 else
+	  //      // 		   begin
+	  //      // 		      next_cache1[info.idx][63:32] = dcif.dmemstore;
+	  //      // 		   end
+	  //      // 	      end // if (curr_used)
+	  //      // 	    else
+	  //      // 	      begin
+	  //      // 		 // Update the next use cache
+	  //      // 		 next_used = 1;
+			 
+	  //      // 		 next_cache0[info.idx][91] = 1;// valid = 0
+	  //      // 		 next_cache0[info.idx][90] = 1;// ditry = 1
+	  //      // 		 next_cache0[info.idx][89:64] = info.tag;
+			 
+	  //      // 		 if(info.blkoff == 0)
+	  //      // 		   begin
+	  //      // 		      next_cache0[info.idx][31:0] = dcif.dmemstore;
+	  //      // 		   end
+	  //      // 		 else
+	  //      // 		   begin
+	  //      // 		      next_cache0[info.idx][63:32] = dcif.dmemstore;
+	  //      // 		   end
+	  //      // 	      end
+	  //      // 	 end // if (dcif.dmemWEN)
+	  //   end
 	  FLUSH0:
 	    begin
 	       if(curr_cache0[curr_idx0][90] == 1)//If data is dirtry, write data to ram
