@@ -9,33 +9,39 @@ module dcache (
 
    parameter CPUID = 0;
 
-   logic 		   valid0, dirty0, valid;
-   logic 		   valid1, dirty1;
-   logic 		   dirty;
-   
-   logic 		   curr_used, next_used;
-   
+   int 			   i;
    
    // logic [DTAG_W-1:0] tag;
    // logic [DIDX_W-1:0] idx;
    // logic [DBLK_W-1:0] blkoff;
 
+   logic 	      curr_used, next_used;
    logic [7:0][91:0]  curr_cache0, next_cache0;
    logic [7:0][91:0]  curr_cache1, next_cache1;
 
-   typedef enum 	  logic [3:0] {IDLE, READ1, READ1_DONE, READ2, READ2_DONE, WRITE1, WRITE2, WRITE_DONE, FLUSH1, HIT_WRITE, HIT_WAIT, DONE} cacheState;
+   // Index and block offset used to flush cache0 and cache1
+   logic [DIDX_W-1:0] curr_idx0, next_idx0;
+   logic [DIDX_W-1:0] curr_idx1, next_idx1;
+   logic [DBLK_W-1:0] curr_blkoff0, next_blkoff0;
+   logic [DBLK_W-1:0] curr_blkoff1, next_blkoff1;
+
+   // Record the hit number
+   word_t curr_number, next_number;
+
+   // cache done flag is set when all the dirty data has been writen to ram
+   logic 	      cache0_done, cache1_done;
+   
+   dcachef_t info;   
+   logic 		  valid0, dirty0, valid;
+   logic 		  valid1, dirty1;
+   logic 		  dirty;
+   logic 		  hit0, hit1, hit, miss;
+
+   // Define state machine
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ1_DONE, READ2, READ2_DONE, WRITE1, WRITE2, WRITE_DONE, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
    
    cacheState curr_state, next_state;
 
-
-   logic 		  hit0, hit1, hit, miss;
-   // logic 		  hit_write;
-
-   // logic [4:0] 		  count, next_count;//32, larger than 16 we needed
-   
-   int 			  i;
-   dcachef_t info;
-   
    
    assign valid0 = curr_cache0[info.idx][91];
    assign valid1 = curr_cache1[info.idx][91];
@@ -56,15 +62,14 @@ module dcache (
    assign hit1 = (info.tag == curr_cache1[info.idx][89:89-DTAG_W+1] && valid1 == 1);
    
    assign hit = hit0 | hit1;
-   // assign miss = ~hit && valid0 == 1 && valid1 == 1;
+   assign next_number = (hit) ? (curr_number + 1) : curr_number;
+   
    assign miss = ~hit;
-   
-   // assign dirty =  curr_used ? dirty0 : dirty1;
 
 
-   
-   
-   // assign hit_write = 
+   // Flush cache0 is done
+   assign cache0_done = (curr_idx0 >= 8) ? 1 : 0;
+   assign cache1_done = (curr_idx1 >= 8) ? 1 : 0;
 
    
    always_ff @ (posedge CLK, negedge nRST) 
@@ -72,7 +77,15 @@ module dcache (
 	if (nRST == 0) 
 	  begin
 	     curr_used <= 0;
-	     // count <= 0;
+	     
+	     curr_idx0 <= 0;
+	     curr_blkoff0 <= 0;
+	     
+	     curr_idx1 <= 0;
+	     curr_blkoff1 <= 0;
+
+	     curr_number <= 0;
+	     
 	     for(i = 0; i < 8; i++)begin
 		curr_cache0[i] <= 0;
 		curr_cache1[i] <= 0;
@@ -81,9 +94,17 @@ module dcache (
 	else 
 	  begin
 	     curr_used <= next_used;
-	     // count <= next_count;
+	     
+	     curr_idx0 <= next_idx0;
+	     curr_blkoff0 <= next_idx0;
+	     
+	     curr_idx1 <= next_idx1;
+	     curr_blkoff1 <= next_idx1;
+	     
 	     curr_cache0 <= next_cache0;
 	     curr_cache1 <= next_cache1;
+
+	     curr_number = next_number;	     
 	  end
      end // always_ff @
    
@@ -114,7 +135,7 @@ module dcache (
 		 end
 	       else if(dcif.halt == 1) 
 		 begin
-		    next_state = FLUSH1;
+		    next_state = FLUSH0;
 		 end
 	    end
 	  READ1:
@@ -157,26 +178,33 @@ module dcache (
 	    begin
 	       next_state = dcif.dmemREN ? READ1 : IDLE;
 	    end
+	  FLUSH0:// Write dirty data from the first cache to ram
+	    begin
+	       if(cache0_done)
+	       	 begin
+	       	    next_state = FLUSH1;
+	       	 end
+	    end
 	  FLUSH1:
 	    begin
-	       // if(hit_write)
-	       // 	 begin
-	       // 	    next_state = HIT_WRITE;
-	       // 	 end
+	       if(cache1_done)
+		 begin
+		    next_state = HIT_WRITE;
+		 end
 	    end
-	  HIT_WRITE:
+	  HIT_WRITE:// Write number of hit to ram
 	    begin
-	       // next_state = HIT_WAIT;
+	       if(ccif.dwait == 0)begin
+	       	  next_state = HIT_DONE;
+	       end
 	    end
-	  HIT_WAIT:
+	  HIT_DONE:
 	    begin
-	       // if(ccif.dwait == 0)begin
-	       // 	  next_state = DONE;
-	       // end
+	       next_state = DONE;
 	    end
 	  DONE: 
 	    begin
-	       // dcif.flushed = 1;
+	       // No more state. Set datapath flush to 1
 	    end
 	endcase // case (curr_state)
      end
@@ -196,6 +224,14 @@ module dcache (
 	next_used = curr_used;
 	next_cache0 = curr_cache0;
 	next_cache1 = curr_cache1;
+
+	next_idx0 = curr_idx0;
+	next_blkoff0 = curr_blkoff0;
+
+	next_idx1 = curr_idx1;
+	next_blkoff1 = curr_blkoff1;
+
+	// next_number = curr_number;
 	
 	case(curr_state)
 	  IDLE:
@@ -454,17 +490,63 @@ module dcache (
 		      end
 		 end // if (dcif.dmemWEN)
 	    end
+	  FLUSH0:
+	    begin
+	       if(curr_cache0[curr_idx0][90] == 1)//If data is dirtry, write data to ram
+		 begin
+		    ccif.dWEN = 1;
+		    ccif.dstore = curr_blkoff0 ? curr_cache0[curr_idx0][63:32] : curr_cache0[curr_idx0][31:0];
+		    ccif.daddr = {curr_cache0[curr_idx0][89:64], curr_idx0, curr_blkoff0, 2'b00};
+		    if(ccif.dwait == 0 && curr_blkoff0 == 0)
+		      begin
+			 next_blkoff0 = 1;
+		      end
+		    else if(ccif.dwait == 0 && curr_blkoff0 == 1)
+		      begin
+			 next_blkoff0 = 0;
+			 next_idx0 = curr_idx0 + 1;
+		      end
+		 end
+	       else // If data is clean, do nothing. Go to next index.
+		 begin
+		    next_idx0 = curr_idx0 + 1;
+		 end
+	    end
 	  FLUSH1:
 	    begin
+	       if(curr_cache1[curr_idx1][90] == 1)//If data is dirtry, write data to ram
+		 begin
+		    ccif.dWEN = 1;
+		    ccif.dstore = curr_blkoff1 ? curr_cache1[curr_idx1][63:32] : curr_cache1[curr_idx1][31:0];
+		    ccif.daddr = {curr_cache1[curr_idx1][89:64], curr_idx1, curr_blkoff1, 2'b00};
+		    if(ccif.dwait == 0 && curr_blkoff1 == 0)
+		      begin
+			 next_blkoff1 = 1;
+		      end
+		    else if(ccif.dwait == 0 && curr_blkoff1 == 1)
+		      begin
+			 next_blkoff1 = 0;
+			 next_idx1 = curr_idx1 + 1;
+		      end
+		 end
+	       else // If data is clean, do nothing. Go to next index.
+		 begin
+		    next_idx1 = curr_idx1 + 1;
+		 end
 	    end
 	  HIT_WRITE:
 	    begin
+	       ccif.dWEN = 1;
+	       ccif.dstore = curr_number;
+	       ccif.daddr = 32'h3100;
 	    end
-	  HIT_WAIT:
+	  HIT_DONE:
 	    begin
+	       // Do nothing
 	    end
 	  DONE: 
 	    begin
+	       dcif.flushed = 1;
 	    end
 	endcase // case (curr_state)
      end
