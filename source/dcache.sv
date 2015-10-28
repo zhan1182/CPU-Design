@@ -330,6 +330,9 @@ module dcache (
 	    end
 	  READ1_DONE:
 	    begin
+	       // Keep the ram read enable
+	       ccif.dREN = 1;
+	       
 	       // dcif.dmemload = ccif.dload;
 	       if(curr_used)
 		 begin
@@ -369,6 +372,8 @@ module dcache (
 	    end
 	  READ2_DONE:
 	    begin
+	       // Keep the ram read enable
+	       ccif.dREN = 1;
 	       
 	       dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 	       
