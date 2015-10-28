@@ -31,11 +31,43 @@ module memory_control (
    assign ccif.ramstore = ccif.dstore;
    assign ccif.dload = ccif.ramload;
    assign ccif.iload = (ccif.iREN == 1) ? ccif.ramload:0;
-   
+
+   assign ccif.iwait = (ccif.ramstate == ACCESS) ? (((ccif.iREN == 1)&&(ccif.dREN == 0)&&(ccif.dWEN == 0))?0:1):1;
+   assign ccif.dwait = (ccif.ramstate == ACCESS) ? (((ccif.dREN == 1)||(ccif.dWEN == 1))?0:1):1;
+
+   /*
    always_comb
      begin
    	ccif.dwait = 1;
    	ccif.iwait = 1;
+	/*
+	ccif.ramWEN = 0;
+	ccif.ramREN = 0;
+
+	if(ccif.dREN || ccif.iREN)begin
+	   if(ccif.dWEN == 0)begin
+	      ccif.ramREN = 1;
+	      ccif.ramWEN = 0;
+	      
+	   end
+	end
+	if(ccif.dWEN == 1 && ccif.iREN == 1)begin
+	   ccif.ramWEN = 1;
+	   ccif.ramREN = 0;
+	end
+	if(ccif.dWEN == 1 && ccif.dREN == 1)begin
+	   ccif.ramWEN = 1;
+	   ccif.ramREN = 0;
+	end
+	if(ccif.dWEN == 1 && ccif.dREN == 0 && ccif.iREN == 0)begin
+	   ccif.ramWEN = 1;
+	   ccif.ramREN = 0;
+	end
+	if(ccif.dWEN == 1 && ccif.dREN == 1 && ccif.iREN == 1)begin
+	   ccif.ramWEN = 1;
+	   ccif.ramREN = 0;
+	end
+	
 	
    	casez(ccif.ramstate)
 
@@ -62,6 +94,5 @@ module memory_control (
 	  
    	endcase // case (ccif.ramstate)
 	
-     end // always_comb
-   
+     end*/
 endmodule
