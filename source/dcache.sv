@@ -556,7 +556,7 @@ module dcache (
 		    ccif.dstore = curr_blkoff0 ? curr_cache0[curr_idx0][63:32] : curr_cache0[curr_idx0][31:0];
 		    flush_tag = curr_cache0[curr_idx0][89:64];
 		    
-		    ccif.daddr = {curr_cache0[curr_idx0][89:64], curr_idx0, curr_blkoff0, 2'b00};
+		    ccif.daddr = {curr_cache0[curr_idx0][89:64], curr_idx0[2:0], curr_blkoff0, 2'b0};
 		    if(ccif.dwait == 0 && curr_blkoff0 == 0)
 		      begin
 			 next_blkoff0 = 1;
@@ -579,7 +579,7 @@ module dcache (
 		    ccif.dWEN = 1;
 		    ccif.dstore = curr_blkoff1 ? curr_cache1[curr_idx1][63:32] : curr_cache1[curr_idx1][31:0];
 		    flush_tag = curr_cache1[curr_idx0][89:64];
-		    ccif.daddr = {curr_cache1[curr_idx1][89:64], curr_idx1, curr_blkoff1, 2'b00};
+		    ccif.daddr = {curr_cache1[curr_idx1][89:64], curr_idx1[2:0], curr_blkoff1, 2'b0};
 		    if(ccif.dwait == 0 && curr_blkoff1 == 0)
 		      begin
 			 next_blkoff1 = 1;
