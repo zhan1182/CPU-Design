@@ -37,6 +37,8 @@ module dcache (
    logic 		  dirty;
    logic 		  hit0, hit1, hit, miss;
 
+   logic [DTAG_W-1:0] 	  flush_tag;
+   
    // Define state machine
    typedef enum 	  logic [3:0] {IDLE, READ1, READ2, READ_DONE, WRITE1, WRITE2, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
    
@@ -129,7 +131,7 @@ module dcache (
 		 begin
 		    next_state = FLUSH0;
 		 end
-	       else if(miss && dirty && valid) 
+	       else if(miss && dirty && valid && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = WRITE1;
 		 end
@@ -231,6 +233,8 @@ module dcache (
 	next_idx1 = curr_idx1;
 	next_blkoff1 = curr_blkoff1;
 
+	flush_tag = 0;
+	
 	// next_number = curr_number;
 	
 	case(curr_state)
@@ -550,6 +554,8 @@ module dcache (
 		 begin
 		    ccif.dWEN = 1;
 		    ccif.dstore = curr_blkoff0 ? curr_cache0[curr_idx0][63:32] : curr_cache0[curr_idx0][31:0];
+		    flush_tag = curr_cache0[curr_idx0][89:64];
+		    
 		    ccif.daddr = {curr_cache0[curr_idx0][89:64], curr_idx0, curr_blkoff0, 2'b00};
 		    if(ccif.dwait == 0 && curr_blkoff0 == 0)
 		      begin
@@ -572,6 +578,7 @@ module dcache (
 		 begin
 		    ccif.dWEN = 1;
 		    ccif.dstore = curr_blkoff1 ? curr_cache1[curr_idx1][63:32] : curr_cache1[curr_idx1][31:0];
+		    flush_tag = curr_cache1[curr_idx0][89:64];
 		    ccif.daddr = {curr_cache1[curr_idx1][89:64], curr_idx1, curr_blkoff1, 2'b00};
 		    if(ccif.dwait == 0 && curr_blkoff1 == 0)
 		      begin
