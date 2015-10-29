@@ -64,7 +64,7 @@ module dcache (
    assign hit1 = (info.tag == curr_cache1[info.idx][89:89-DTAG_W+1] && valid1 == 1);
    
    assign hit = hit0 | hit1;
-   assign next_number = (hit) ? (curr_number + 1) : curr_number;
+   // assign next_number = (hit) ? (curr_number + 1) : curr_number;
    
    assign miss = ~hit;
 
@@ -235,7 +235,7 @@ module dcache (
 
 	flush_tag = 0;
 	
-	// next_number = curr_number;
+	next_number = curr_number;
 	
 	case(curr_state)
 	  IDLE:
@@ -244,11 +244,17 @@ module dcache (
 		 begin
 		    if(hit0)
 		      begin
+			 // increment hit number
+			 next_number = curr_number + 1;
+			 
 			 dcif.dmemload = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 		      end
 		    else if(hit1)
 		      begin
+			 // increment hit number
+			 next_number = curr_number + 1;
+			 
 			 dcif.dmemload = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 		      end
@@ -291,6 +297,9 @@ module dcache (
 		    //   end // if (valid1 == 0)
 		    if(hit0)
 		      begin
+			 // increment hit number
+			 next_number = curr_number + 1;
+			 
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
 			 next_used = 1;
@@ -309,6 +318,9 @@ module dcache (
 		      end
 		    else if(hit1)
 		      begin
+			 // increment hit number
+			 next_number = curr_number + 1;
+			 
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
 			 next_used = 0;
