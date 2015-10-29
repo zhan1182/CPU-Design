@@ -38,6 +38,8 @@ module dcache (
    logic 		  hit0, hit1, hit, miss;
 
    logic [DTAG_W-1:0] 	  flush_tag;
+   logic 		  flush_dirty0, flush_dirty1;
+   
    
    // Define state machine
    typedef enum 	  logic [3:0] {IDLE, READ1, READ2, READ_DONE, WRITE1, WRITE2, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
@@ -234,6 +236,8 @@ module dcache (
 	next_blkoff1 = curr_blkoff1;
 
 	flush_tag = 0;
+	flush_dirty0 = 0;
+	flush_dirty1 = 0;
 	
 	next_number = curr_number;
 	
@@ -488,14 +492,18 @@ module dcache (
 	    begin
 	       // Turn on MEM write enable
 	       ccif.dWEN = 1;
-	       ccif.daddr = dcif.dmemaddr;
+	       //ccif.daddr = dcif.dmemaddr;
 	       if (curr_used)
 		 begin
 		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
+		    ccif.daddr = {curr_cache1[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
+		    
 		 end
 	       else 
 		 begin
 		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
+		    ccif.daddr = {curr_cache0[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
+		    
 		 end
 	    end
 	  WRITE2:
@@ -503,16 +511,19 @@ module dcache (
 	       ccif.dWEN = 1;
 
 	       // Calculate the data address
-	       ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
+	       //ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
 	       
 	       if (curr_used)
 		 begin
 		    // Give the data to mem. The data is from datapath
 		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];
+		    ccif.daddr = info.blkoff ? {curr_cache1[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache1[info.idx][89:64], info.idx, 1'b1, info.bytoff};
+		    
 		 end
 	       else 
 		 begin
 		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][31:0] : curr_cache0[info.idx][63:32];
+		    ccif.daddr = info.blkoff ? {curr_cache0[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache0[info.idx][89:64], info.idx, 1'b1, info.bytoff};
 		 end
 	    end // case: WRITE2
 	  // WRITE_DONE:
@@ -562,6 +573,8 @@ module dcache (
 	  //   end
 	  FLUSH0:
 	    begin
+	       flush_dirty0 = curr_cache0[curr_idx0][90];
+	       
 	       if(curr_cache0[curr_idx0][90] == 1)//If data is dirtry, write data to ram
 		 begin
 		    ccif.dWEN = 1;
@@ -586,6 +599,8 @@ module dcache (
 	    end
 	  FLUSH1:
 	    begin
+	       flush_dirty1 = curr_cache1[curr_idx1][90];
+	       
 	       if(curr_cache1[curr_idx1][90] == 1)//If data is dirtry, write data to ram
 		 begin
 		    ccif.dWEN = 1;
