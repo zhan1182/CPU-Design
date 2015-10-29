@@ -251,41 +251,41 @@ module dcache (
 		 end
 	       else if(dcif.dmemWEN)
 		 begin
-		    if(valid0 == 0)
-		      begin
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+		    // if(valid0 == 0)
+		    //   begin
+		    // 	 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
-			 next_used = 1;
-			 next_cache0[info.idx][90] = 1;
-			 next_cache0[info.idx][91] = 1;// Assign valid1 to 1
-			 next_cache0[info.idx][89:64] = info.tag;// Assign tag
-			 if (info.blkoff == 1)
-			   begin
-			      next_cache0[info.idx][63:32] = dcif.dmemstore;
-			   end
-			 else
-			   begin
-			      next_cache0[info.idx][31:0] = dcif.dmemstore;
-			   end
-		      end // if (valid0 == 0)
-		    else if(valid1 == 0)
-		      begin
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+		    // 	 next_used = 1;
+		    // 	 next_cache0[info.idx][90] = 1;
+		    // 	 next_cache0[info.idx][91] = 1;// Assign valid1 to 1
+		    // 	 next_cache0[info.idx][89:64] = info.tag;// Assign tag
+		    // 	 if (info.blkoff == 1)
+		    // 	   begin
+		    // 	      next_cache0[info.idx][63:32] = dcif.dmemstore;
+		    // 	   end
+		    // 	 else
+		    // 	   begin
+		    // 	      next_cache0[info.idx][31:0] = dcif.dmemstore;
+		    // 	   end
+		    //   end // if (valid0 == 0)
+		    // else if(valid1 == 0)
+		    //   begin
+		    // 	 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
-			 next_used = 0;
-			 next_cache1[info.idx][90] = 1;
-			 next_cache1[info.idx][91] = 1;
-			 next_cache1[info.idx][89:64] = info.tag;
-			 if (info.blkoff == 1) 
-			   begin
-			      next_cache1[info.idx][63:32] = dcif.dmemstore;
-			   end
-			 else 
-			   begin
-			      next_cache1[info.idx][31:0] = dcif.dmemstore;
-			   end
-		      end // if (valid1 == 0)
-		    else if(hit0)
+		    // 	 next_used = 0;
+		    // 	 next_cache1[info.idx][90] = 1;
+		    // 	 next_cache1[info.idx][91] = 1;
+		    // 	 next_cache1[info.idx][89:64] = info.tag;
+		    // 	 if (info.blkoff == 1) 
+		    // 	   begin
+		    // 	      next_cache1[info.idx][63:32] = dcif.dmemstore;
+		    // 	   end
+		    // 	 else 
+		    // 	   begin
+		    // 	      next_cache1[info.idx][31:0] = dcif.dmemstore;
+		    // 	   end
+		    //   end // if (valid1 == 0)
+		    if(hit0)
 		      begin
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
