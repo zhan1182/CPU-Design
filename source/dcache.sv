@@ -15,7 +15,7 @@ module dcache (
    // logic [DIDX_W-1:0] idx;
    // logic [DBLK_W-1:0] blkoff;
 
-   logic 	      curr_used, next_used;
+   logic [7:0]   curr_used, next_used;
    logic [7:0][91:0]  curr_cache0, next_cache0;
    logic [7:0][91:0]  curr_cache1, next_cache1;
 
@@ -49,11 +49,11 @@ module dcache (
    
    assign valid0 = curr_cache0[info.idx][91];
    assign valid1 = curr_cache1[info.idx][91];
-   assign valid = curr_used ? valid1 : valid0;
+   assign valid = curr_used[info.idx] ? valid1 : valid0;
 
    assign dirty0 = curr_cache0[info.idx][90];
    assign dirty1 = curr_cache1[info.idx][90];
-   assign dirty = curr_used ? dirty1 : dirty0;
+   assign dirty = curr_used[info.idx] ? dirty1 : dirty0;
 
    // assign tag = dcif.dmemaddr[31:31-DTAG_W+1];
    // assign idx = dcif.dmemaddr[31-DTAG_W:31-DTAG_W-DIDX_W+1];
@@ -89,7 +89,6 @@ module dcache (
 	     curr_blkoff1 <= 0;
 
 	     curr_number <= 0;
-	     
 	     for(i = 0; i < 8; i++)begin
 		curr_cache0[i] <= 0;
 		curr_cache1[i] <= 0;
@@ -306,7 +305,7 @@ module dcache (
 			 
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
-			 next_used = 1;
+			 next_used[info.idx] = 1;
 			 // Assign dirty to 1. The data is dirty, only exists in cache, need to be writen back to ram
 			 next_cache0[info.idx][90] = 1;
 			 next_cache0[info.idx][91] = 1;// Assign valid1 to 1
@@ -327,7 +326,7 @@ module dcache (
 			 
 			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 			 
-			 next_used = 0;
+			 next_used[info.idx] = 0;
 			 
 			 next_cache1[info.idx][90] = 1;
 			 next_cache1[info.idx][91] = 1;
@@ -351,7 +350,7 @@ module dcache (
 	       if(ccif.dwait == 0)
 		 begin
 		    // dcif.dmemload = ccif.dload;
-		    if(curr_used)
+		    if(curr_used[info.idx])
 		      begin
 			 next_cache1[info.idx][91] = 1;
 			 next_cache1[info.idx][90] = 0;
@@ -391,10 +390,10 @@ module dcache (
 		 begin
 		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 		    
-		    if(curr_used)
+		    if(curr_used[info.idx])
 		      begin
 			 // Update the next_used
-			 next_used = 0;
+			 next_used[info.idx] = 0;
 			 
 			 next_cache1[info.idx][91] = 1;
 			 next_cache1[info.idx][90] = dcif.dmemWEN ? 1:0;
@@ -419,7 +418,7 @@ module dcache (
 		    else
 		      begin
 			 // Update the next_used
-			 next_used = 1;
+			 next_used[info.idx] = 1;
 		    
 			 next_cache0[info.idx][91] = 1;
 			 next_cache0[info.idx][90] = dcif.dmemWEN ? 1:0;
@@ -493,7 +492,7 @@ module dcache (
 	       // Turn on MEM write enable
 	       ccif.dWEN = 1;
 	       //ccif.daddr = dcif.dmemaddr;
-	       if (curr_used)
+	       if (curr_used[info.idx])
 		 begin
 		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
 		    ccif.daddr = {curr_cache1[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
@@ -513,7 +512,7 @@ module dcache (
 	       // Calculate the data address
 	       //ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
 	       
-	       if (curr_used)
+	       if (curr_used[info.idx])
 		 begin
 		    // Give the data to mem. The data is from datapath
 		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];

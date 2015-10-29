@@ -196,8 +196,8 @@ module datapath (
    
    // Connect going through signals
    assign pr_if.RegWrite_in_3 = pr_if.RegWrite_out_2;
-   assign pr_if.dWEN_in_3 = pr_if.dWEN_out_2;
-   assign pr_if.dREN_in_3 = pr_if.dREN_out_2;
+   assign pr_if.dWEN_in_3 = BRJ? 0 : pr_if.dWEN_out_2; //MODIFY
+   assign pr_if.dREN_in_3 = BRJ? 0 : pr_if.dREN_out_2;  // MODIFY
    assign pr_if.jal_in_3 = pr_if.jal_out_2;
    assign pr_if.bne_in_3 = pr_if.bne_out_2;
    assign pr_if.beq_in_3 = pr_if.beq_out_2;
