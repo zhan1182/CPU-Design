@@ -11,7 +11,7 @@
 
 interface hazard_if;
    import cpu_types_pkg::*;
-   parameter CPUS = 1;
+   parameter CPUS = 2;
    parameter CPUID = 0;
 
 
