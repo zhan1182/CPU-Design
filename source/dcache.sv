@@ -247,64 +247,76 @@ module dcache (
 		 begin
 		    if(hit0)
 		      begin
-			 // increment hit number
-			 next_number = curr_number + 1;
-			 
-			 dcif.dmemload = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			 if(dcif.halt == 0)
+			   begin
+			      // increment hit number
+			      next_number = curr_number + 1;
+			      
+			      dcif.dmemload = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
+			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			   end
 		      end
 		    else if(hit1)
 		      begin
-			 // increment hit number
-			 next_number = curr_number + 1;
-			 
-			 dcif.dmemload = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			 if(dcif.halt == 0)
+			   begin
+			      // increment hit number
+			      next_number = curr_number + 1;
+			      
+			      dcif.dmemload = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
+			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			   end
 		      end
 		 end
 	       else if(dcif.dmemWEN)
 		 begin
 		    if(hit0)
 		      begin
-			 // increment hit number
-			 next_number = curr_number + 1;
-			 
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-			 
-			 next_used[info.idx] = 1;
-			 // Assign dirty to 1. The data is dirty, only exists in cache, need to be writen back to ram
-			 next_cache0[info.idx][90] = 1;
-			 next_cache0[info.idx][91] = 1;// Assign valid1 to 1
-			 next_cache0[info.idx][89:64] = info.tag;
-			 if (info.blkoff == 1) 
+			 if(dcif.halt == 0)
 			   begin
-			      next_cache0[info.idx][63:32] = dcif.dmemstore;
-			   end
-			 else 
-			   begin
-			      next_cache0[info.idx][31:0] = dcif.dmemstore;
+			      // increment hit number
+			      next_number = curr_number + 1;
+			      
+			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			      
+			      next_used[info.idx] = 1;
+			      // Assign dirty to 1. The data is dirty, only exists in cache, need to be writen back to ram
+			      next_cache0[info.idx][90] = 1;
+			      next_cache0[info.idx][91] = 1;// Assign valid1 to 1
+			      next_cache0[info.idx][89:64] = info.tag;
+			      if (info.blkoff == 1) 
+				begin
+				   next_cache0[info.idx][63:32] = dcif.dmemstore;
+				end
+			      else 
+				begin
+				   next_cache0[info.idx][31:0] = dcif.dmemstore;
+				end
 			   end
 		      end
 		    else if(hit1)
 		      begin
-			 // increment hit number
-			 next_number = curr_number + 1;
-			 
-			 dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-			 
-			 next_used[info.idx] = 0;
-			 
-			 next_cache1[info.idx][90] = 1;
-			 next_cache1[info.idx][91] = 1;
-			 next_cache1[info.idx][89:64] = info.tag;
-			 if (info.blkoff == 1) 
+			 if(dcif.halt == 0)
 			   begin
-			      next_cache1[info.idx][63:32] = dcif.dmemstore;
-			   end
-			 else 
-			   begin
-			      next_cache1[info.idx][31:0] = dcif.dmemstore;
-			   end
+			      // increment hit number
+			      next_number = curr_number + 1;
+			      
+			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+			      
+			      next_used[info.idx] = 0;
+			      
+			      next_cache1[info.idx][90] = 1;
+			      next_cache1[info.idx][91] = 1;
+			      next_cache1[info.idx][89:64] = info.tag;
+			      if (info.blkoff == 1) 
+				begin
+				   next_cache1[info.idx][63:32] = dcif.dmemstore;
+				end
+			      else 
+				begin
+				   next_cache1[info.idx][31:0] = dcif.dmemstore;
+				end
+			   end // if (dcif.halt == 0)
 		      end // if (hit1)
 		 end // if (dcif.dmemWEN)
 	    end // case: IDLE
