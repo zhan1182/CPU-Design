@@ -9,15 +9,13 @@
 	ori   $a3, $zero, 0x800  # init the shared address
 	ori   $a2, $zero, 0x728  # the end of the buffer
 	ori   $s7, $zero, 0      # init producer counter
-	ori   $s6, $zero, 255    # init producer total
+	ori   $s6, $zero, 256    # init producer total
 	ori   $s0, $zero, 1	# init seed as 1, $s0 stores the tmp value
 generate:
 	beq   $s6, $s7, exit_1
 	jal   produce
 	j     generate
 exit_1:
-	lw    $gp, 0($a3)
-	lw    $s1, -4($gp)
 	halt
 
 produce:
@@ -81,7 +79,7 @@ unlock:
 	ori   $s5, $zero, 0x900  # init the resutls mem address
 	ori   $s4, $zero, 0xffff # lower 16 bits mask
 	ori   $s7, $zero, 0      # init consumer counter
-	ori   $s6, $zero, 255    # init consumer total
+	ori   $s6, $zero, 256    # init consumer total
 
 consume_begin:
 	beq $s6, $s7, exit_2
@@ -91,6 +89,17 @@ exit_2:
 	lw $s0, 0($s5) # load the max
 	lw $s1, 4($s5) # load the min
 	lw $s2, 8($s5) # load the sum
+
+	# call div-subroutine
+	or $a0, $zero, $s2
+	or $a1, $zero, $s6
+	jal divide
+
+	# Store the average results back to mem
+	sw $v0, 8($s5)
+
+	# load the average to register
+	lw $s2, 8($s5) # load the average
 	
 	halt
 
