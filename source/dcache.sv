@@ -40,9 +40,27 @@ module dcache (
    logic [DTAG_W-1:0] 	  flush_tag;
    logic 		  flush_dirty0, flush_dirty1;
    
+   // FOR MULTI CORE
+   logic [25:0]		  sp_tag;
+   logic [DIDX_W:0] 	  sp_idx;
+   logic [1:0] 		  sp_cache;
+   logic 		  sp_blk;
+   logic 		  sp_dirty0, sp_dirty1;
+   
+   word_t sp_cache0_data, sp_cache1_data, sp1_daddr0, sp1_daddr1, sp2_daddr0, sp2_daddr1, ccsnoopaddr, sp2_ccsnoopaddr;
+   
+   
+   logic 		  ccwait, ccinv, ccwrite, cctrans;
+   
+   logic 		  dwait;
+   logic 		  dREN, dWEN;
+   word_t dload, dstore, daddr;
+   
+   
+   
    
    // Define state machine
-   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, READ_DONE, WRITE1, WRITE2, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
+   typedef enum 	  logic [3:0] {IDLE, READ1, READ2, WRITE1, WRITE2, SPCHK, SP1, SP2, FLUSH0, FLUSH1, HIT_WRITE, HIT_DONE, DONE} cacheState;
    
    cacheState curr_state, next_state;
 
@@ -75,6 +93,35 @@ module dcache (
    assign cache0_done = (curr_idx0 >= 8) ? 1 : 0;
    assign cache1_done = (curr_idx1 >= 8) ? 1 : 0;
 
+
+   // for multicore snoop
+   assign sp_tag = ccif.ccsnoopaddr[31:6];
+   assign sp_idx = ccif.ccsnoopaddr[5:3];
+   assign sp_cache = (sp_tag == curr_cache0[sp_idx][89:64]) ? 2'b00 : (sp_tag == curr_cache1[sp_idx][89:64]) ? 2'b01 : 2'b11; // choose which cache to use
+   // if sp_core is 00, match cache0, 01 -> cache1, 11 -> no match
+   assign sp_blk = ccif.ccsnoopaddr[2];
+   assign ccwait = ccif.ccwait[CPUID];
+   assign ccinv = ccif.ccinv[CPUID];
+   assign ccsnoopaddr = ccif.ccsnoopaddr[CPUID];
+   assign ccif.ccwrite[CPUID] = ccwrite;
+   assign ccif.cctrans[CPUID] = cctrans;
+   assign sp_cache0_data = sp_blk ? curr_cache0[sp_idx][63:32] : curr_cache0[sp_idx][31:0];
+   assign sp_cache1_data = sp_blk ? curr_cache1[sp_idx][63:32] : curr_cache1[sp_idx][31:0];
+   assign sp_dirty0 = curr_cache0[sp_idx][90];
+   assign sp_dirty1 = curr_cache1[sp_idx][90];
+
+   assign dwait = ccif.dwait[CPUID];
+   assign dload = ccif.dload[CPUID];
+   assign ccif.dREN[CPUID] = dREN;
+   assign ccif.dWEN[CPUID] = dWEN;
+   assign ccif.daddr[CPUID] = daddr;
+   assign ccif.dstore[CPUID] = dstore;
+   assign sp2_ccsnoopaddr = sp_blk ? ccsnoopaddr - 4 : ccsnoopaddr + 4;
+   
+   assign sp1_daddr1 = {curr_cache1[sp_idx][89:64], sp_idx, sp_blk, 2'b00};
+   assign sp1_daddr0 = {curr_cache0[sp_idx][89:64], sp_idx, sp_blk, 2'b00};
+   assign sp2_daddr1 = {curr_cache1[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
+   assign sp2_daddr0 = {curr_cache0[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
    
    always_ff @ (posedge CLK, negedge nRST) 
      begin
@@ -125,34 +172,51 @@ module dcache (
    always_comb
      begin
 	next_state = curr_state;
+	cctrans = 0;
+	
 	case(curr_state)
 	  IDLE:
 	    begin
+	       
 	       if(dcif.halt == 1) 
 		 begin
 		    next_state = FLUSH0;
 		 end
+	       else if(ccwait) // if ccwait, then check snoop
+		 begin
+		    next_state = SPCHK;
+		 end
 	       else if(miss && dirty && valid && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = WRITE1;
+		    cctrans = 1;
+		    
 		 end
 	       else if(miss && dirty == 0 && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = READ1;
+		    cctrans = 1;
+		    
 		 end
 	    end
 	  READ1:
 	    begin
-	       if (ccif.dwait == 0) 
+	       if (dwait == 0) 
 		 begin
 		    next_state = READ2;
 		 end
+	       cctrans = 1;
+	       
 	    end
 	  READ2:
 	    begin
-	       if (ccif.dwait == 0) 
+	       cctrans = 1;
+	       
+	       if (dwait == 0) 
 		 begin
 		    next_state = IDLE;
+		    cctrans = 0;
+		    
 		 end
 	    end
 	  // READ_DONE:
@@ -164,15 +228,21 @@ module dcache (
 	  
 	  WRITE1:
 	    begin
-	       if (ccif.dwait == 0) 
+	       cctrans = 1;
+	       
+	       if (dwait == 0) 
 		 begin
 		    next_state = WRITE2;
 		 end
 	    end
 	  WRITE2:
 	    begin
-	       if (ccif.dwait == 0) 
+	       cctrans = 1;
+	       
+	       if (dwait == 0) 
 		 begin
+		    cctrans = 0;
+		    
 		    next_state = (dcif.dmemREN || dcif.dmemWEN) ? READ1:IDLE;
 		 end
 	    end
@@ -180,6 +250,79 @@ module dcache (
 	  //   begin
 	  //      next_state = (dcif.dmemREN || dcif.dmemWEN) ? READ1:IDLE;
 	  //   end
+	  SPCHK:
+	    begin
+	       if (sp_cache == 2'b11)
+		 begin
+		    // when snoop tag does not match one of the caches
+		    next_state = IDLE;
+		 end
+	       else
+		 begin
+		    // when match
+		    if(!ccinv)
+		      begin
+			 if(sp_cache == 2'b00 && sp_dirty0)
+			   begin
+			      // cache0: M to S
+			      next_state = SP1;
+			   end
+			 else if(sp_cache == 2'b01 && sp_dirty1)
+			   begin
+			      //cache1: M to S
+			      next_state = SP1;
+			   end
+		      end // if (!ccinv)
+		    else
+		      begin
+			 if(sp_cache == 2'b00 && sp_dirty0)
+			   begin
+			      // cache0: M to I
+			      next_state = SP1;
+			   end
+			 else if(sp_cache == 2'b01 && sp_dirty1)
+			   begin
+			      //cache1: M to I
+			      next_state = SP1;
+			   end
+			 else if(sp_cache == 2'b00 && !sp_dirty0)
+			   begin
+			      //cache0: S to I
+			      next_state = IDLE;
+			   end
+			 else if(sp_cache == 2'b01 && !sp_dirty1)
+			   begin
+			      //cahce1: S to I
+			      next_state = IDLE;
+			   end
+			 else
+			   begin
+			      next_state = IDLE;
+			   end
+			 
+		      end // else: !if(!ccinv)
+			   
+		 end // else: !if(sp_cache == 2'b11)
+	    end // case: SPCHK
+
+	  SP1:
+	    begin
+	       if(dwait == 0)
+		 begin
+		    next_state = SP2;
+		 end
+	    end
+
+	  SP2:
+	    begin
+	       if(dwait == 0)
+		 begin
+		    next_state = IDLE;
+		 end
+	    end
+	  
+
+	  
 	  FLUSH0:// Write dirty data from the first cache to ram
 	    begin
 	       if(cache0_done)
@@ -196,7 +339,7 @@ module dcache (
 	    end
 	  HIT_WRITE:// Write number of hit to ram
 	    begin
-	       if(ccif.dwait == 0)
+	       if(dwait == 0)
 		 begin
 	       	    next_state = HIT_DONE;
 		 end
@@ -215,10 +358,10 @@ module dcache (
    always_comb
      begin
 
-	ccif.dREN = 0;
-	ccif.dWEN = 0;
-	ccif.daddr = 0;
-	ccif.dstore = 0;
+	dREN = 0;
+        dWEN = 0;
+	daddr = 0;
+	dstore = 0;
 	
 	dcif.dmemload = 0;
 	dcif.dhit = 0;
@@ -239,11 +382,17 @@ module dcache (
 	flush_dirty1 = 0;
 	
 	next_number = curr_number;
+
+	ccwrite = ccwait ? 0 : dcif.dmemWEN;
+
+	
+	
 	
 	case(curr_state)
 	  IDLE:
 	    begin
-	       if(dcif.dmemREN)
+	       
+	       if(dcif.dmemREN && !ccwait)
 		 begin
 		    if(hit0)
 		      begin
@@ -322,10 +471,10 @@ module dcache (
 	    end // case: IDLE
 	  READ1:
 	    begin
-	       ccif.dREN = 1;
-	       ccif.daddr = dcif.dmemaddr;
+	       dREN = 1;
+	       daddr = dcif.dmemaddr;
 
-	       if(ccif.dwait == 0)
+	       if(dwait == 0)
 		 begin
 		    // dcif.dmemload = ccif.dload;
 		    if(curr_used[info.idx])
@@ -336,11 +485,11 @@ module dcache (
 			 
 			 if(info.blkoff)
 			   begin
-			      next_cache1[info.idx][63:32] = ccif.dload;
+			      next_cache1[info.idx][63:32] = dload;
 			   end
 			 else
 			   begin
-			      next_cache1[info.idx][31:0] = ccif.dload;
+			      next_cache1[info.idx][31:0] = dload;
 			   end
 		      end // if (curr_used)
 		    else
@@ -351,20 +500,20 @@ module dcache (
 			 
 			 if(info.blkoff)
 			   begin
-			      next_cache0[info.idx][63:32] = ccif.dload;
+			      next_cache0[info.idx][63:32] = dload;
 			   end
 			 else
 			   begin
-			      next_cache0[info.idx][31:0] = ccif.dload;
+			      next_cache0[info.idx][31:0] = dload;
 			   end
 		      end // else: !if(curr_used)
 		 end
 	    end
 	  READ2:
 	    begin
-	       ccif.dREN = 1;
-	       ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
-	       if(ccif.dwait == 0)
+	       dREN = 1;
+	       daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
+	       if(dwait == 0)
 		 begin
 		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
 		    
@@ -379,7 +528,7 @@ module dcache (
 			 
 			 if(info.blkoff)
 			   begin
-			      next_cache1[info.idx][31:0] = ccif.dload;
+			      next_cache1[info.idx][31:0] = dload;
 			      // Give the data to datapaht
 			      dcif.dmemload = curr_cache1[info.idx][63:32];
 			      next_cache1[info.idx][63:32] = dcif.dmemWEN ? dcif.dmemstore : curr_cache1[info.idx][63:32];
@@ -389,7 +538,7 @@ module dcache (
 			   begin
 			      next_cache1[info.idx][31:0] = dcif.dmemWEN ? dcif.dmemstore : curr_cache1[info.idx][31:0];
 			      
-			      next_cache1[info.idx][63:32] = ccif.dload;
+			      next_cache1[info.idx][63:32] = dload;
 			      dcif.dmemload = curr_cache1[info.idx][31:0];
 			   end
 		      end // if (curr_used)
@@ -404,13 +553,13 @@ module dcache (
 			 
 			 if(info.blkoff)
 			   begin
-			      next_cache0[info.idx][31:0] = ccif.dload;
+			      next_cache0[info.idx][31:0] = dload;
 			      dcif.dmemload = curr_cache0[info.idx][63:32];
 			      next_cache0[info.idx][63:32] = dcif.dmemWEN ? dcif.dmemstore : curr_cache0[info.idx][63:32];
 			   end
 			 else
 			   begin
-			      next_cache0[info.idx][63:32] = ccif.dload;
+			      next_cache0[info.idx][63:32] = dload;
 			      dcif.dmemload = curr_cache0[info.idx][31:0];
 			      next_cache0[info.idx][31:0] = dcif.dmemWEN ? dcif.dmemstore : curr_cache0[info.idx][31:0];
 			   end
@@ -422,24 +571,24 @@ module dcache (
 	  WRITE1:
 	    begin
 	       // Turn on MEM write enable
-	       ccif.dWEN = 1;
+	       dWEN = 1;
 	       //ccif.daddr = dcif.dmemaddr;
 	       if (curr_used[info.idx])
 		 begin
-		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
-		    ccif.daddr = {curr_cache1[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
+		    dstore = info.blkoff ? curr_cache1[info.idx][63:32] : curr_cache1[info.idx][31:0];
+		    daddr = {curr_cache1[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
 		    
 		 end
 	       else 
 		 begin
-		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
-		    ccif.daddr = {curr_cache0[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
+		    dstore = info.blkoff ? curr_cache0[info.idx][63:32] : curr_cache0[info.idx][31:0];
+		    daddr = {curr_cache0[info.idx][89:64], info.idx, info.blkoff, info.bytoff};
 		    
 		 end
 	    end
 	  WRITE2:
 	    begin
-	       ccif.dWEN = 1;
+	       dWEN = 1;
 
 	       // Calculate the data address
 	       //ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
@@ -447,32 +596,128 @@ module dcache (
 	       if (curr_used[info.idx])
 		 begin
 		    // Give the data to mem. The data is from datapath
-		    ccif.dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];
-		    ccif.daddr = info.blkoff ? {curr_cache1[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache1[info.idx][89:64], info.idx, 1'b1, info.bytoff};
+		    dstore = info.blkoff ? curr_cache1[info.idx][31:0] : curr_cache1[info.idx][63:32];
+		    daddr = info.blkoff ? {curr_cache1[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache1[info.idx][89:64], info.idx, 1'b1, info.bytoff};
 		    
 		 end
 	       else 
 		 begin
-		    ccif.dstore = info.blkoff ? curr_cache0[info.idx][31:0] : curr_cache0[info.idx][63:32];
-		    ccif.daddr = info.blkoff ? {curr_cache0[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache0[info.idx][89:64], info.idx, 1'b1, info.bytoff};
+		    dstore = info.blkoff ? curr_cache0[info.idx][31:0] : curr_cache0[info.idx][63:32];
+		    daddr = info.blkoff ? {curr_cache0[info.idx][89:64], info.idx, 1'b0, info.bytoff} : {curr_cache0[info.idx][89:64], info.idx, 1'b1, info.bytoff};
 		 end
 	    end // case: WRITE2
+
+
+	  SPCHK:
+	    begin
+	       if(sp_cache != 2'b11)
+		 begin
+		    // when match
+		    if(!ccinv)
+		      begin
+			 if(sp_cache == 2'b00 && sp_dirty0)
+			   begin
+			      // cache0: M to S
+			      next_cache0[sp_idx][90] = 0;
+			      ccwrite = 1;
+			      			      
+			   end
+			 else if(sp_cache == 2'b01 && sp_dirty1)
+			   begin
+			      //cache1: M to S
+			      next_cache1[sp_idx][90] = 0;
+			      ccwrite = 1;
+			      
+			   end
+		      end // if (!ccinv)
+		    else
+		      begin
+			 if(sp_cache == 2'b00 && sp_dirty0)
+			   begin
+			      // cache0: M to I
+			      next_cache0[sp_idx][90] = 0;
+			      next_cache0[sp_idx][91] = 0;
+			      ccwrite = 1;
+			      
+			   end
+			 else if(sp_cache == 2'b01 && sp_dirty1)
+			   begin
+			      //cache1: M to I
+			      next_cache1[sp_idx][90] = 0;
+			      next_cache1[sp_idx][91] = 0;
+			      ccwrite = 1;
+			   end
+			 else if(sp_cache == 2'b00 && !sp_dirty0)
+			   begin
+			      //cache0: S to I
+			      next_cache0[sp_idx][90] = 0;
+			      next_cache0[sp_idx][91] = 0;
+			   end
+			 else if(sp_cache == 2'b01 && !sp_dirty1)
+			   begin
+			      //cahce1: S to I
+			      next_cache1[sp_idx][90] = 0;
+			      next_cache1[sp_idx][91] = 0;
+			   end
+			 
+		      end // else: !if(!ccinv)
+			   
+		 end // else: !if(sp_cache == 2'b11)
+	    end // case: SPCHK
+
+	  SP1:
+	    begin
+	       dWEN = 1;
+	       daddr = (sp_cache == 2'b01) ? sp1_daddr1 : sp1_daddr0;
+	       
+	       if(sp_cache == 2'b00)
+		 begin
+		    next_cache0[sp_idx][90] = 0;
+		    dstore = sp_blk ? curr_cache0[sp_idx][63:32] : curr_cache0[sp_idx][31:0];
+		    
+		 end
+	       else
+		 begin
+		    next_cache1[sp_idx][90] = 0;
+		    dstore = sp_blk ? curr_cache1[sp_idx][31:0] : curr_cache0[sp_idx][63:32];
+		    
+		 end
+	       
+	    end
+
+	  SP2:
+	    begin
+	       dWEN = 1;
+	       daddr = (sp_cache == 2'b01) ? sp2_daddr1 : sp2_daddr0;
+	       if(sp_cache == 2'b00)
+		 begin
+		    dstore = sp_blk ? curr_cache0[sp_idx][31:0] : curr_cache0[sp_idx][63:32];
+		    
+		 end
+	       else
+		 begin
+		    dstore = sp_blk ? curr_cache1[sp_idx][31:0] : curr_cache0[sp_idx][63:32];
+		 end
+	       
+	    end
+	  
+	  
 	  FLUSH0:
 	    begin
 	       flush_dirty0 = curr_cache0[curr_idx0][90];
 	       
 	       if(curr_cache0[curr_idx0][90] == 1)//If data is dirtry, write data to ram
 		 begin
-		    ccif.dWEN = 1;
-		    ccif.dstore = curr_blkoff0 ? curr_cache0[curr_idx0][63:32] : curr_cache0[curr_idx0][31:0];
+		    dWEN = 1;
+		    dstore = curr_blkoff0 ? curr_cache0[curr_idx0][63:32] : curr_cache0[curr_idx0][31:0];
 		    flush_tag = curr_cache0[curr_idx0][89:64];
 		    
-		    ccif.daddr = {curr_cache0[curr_idx0][89:64], curr_idx0[2:0], curr_blkoff0, 2'b0};
-		    if(ccif.dwait == 0 && curr_blkoff0 == 0)
+		    daddr = {curr_cache0[curr_idx0][89:64], curr_idx0[2:0], curr_blkoff0, 2'b0};
+		    if(dwait == 0 && curr_blkoff0 == 0)
 		      begin
 			 next_blkoff0 = 1;
 		      end
-		    else if(ccif.dwait == 0 && curr_blkoff0 == 1)
+		    else if(dwait == 0 && curr_blkoff0 == 1)
 		      begin
 			 next_blkoff0 = 0;
 			 next_idx0 = curr_idx0 + 1;
@@ -489,15 +734,15 @@ module dcache (
 	       
 	       if(curr_cache1[curr_idx1][90] == 1)//If data is dirtry, write data to ram
 		 begin
-		    ccif.dWEN = 1;
-		    ccif.dstore = curr_blkoff1 ? curr_cache1[curr_idx1][63:32] : curr_cache1[curr_idx1][31:0];
+		    dWEN = 1;
+		    dstore = curr_blkoff1 ? curr_cache1[curr_idx1][63:32] : curr_cache1[curr_idx1][31:0];
 		    flush_tag = curr_cache1[curr_idx0][89:64];
-		    ccif.daddr = {curr_cache1[curr_idx1][89:64], curr_idx1[2:0], curr_blkoff1, 2'b0};
-		    if(ccif.dwait == 0 && curr_blkoff1 == 0)
+		    daddr = {curr_cache1[curr_idx1][89:64], curr_idx1[2:0], curr_blkoff1, 2'b0};
+		    if(dwait == 0 && curr_blkoff1 == 0)
 		      begin
 			 next_blkoff1 = 1;
 		      end
-		    else if(ccif.dwait == 0 && curr_blkoff1 == 1)
+		    else if(dwait == 0 && curr_blkoff1 == 1)
 		      begin
 			 next_blkoff1 = 0;
 			 next_idx1 = curr_idx1 + 1;
@@ -510,9 +755,9 @@ module dcache (
 	    end
 	  HIT_WRITE:
 	    begin
-	       ccif.dWEN = 1;
-	       ccif.dstore = curr_number;
-	       ccif.daddr = 32'h3100;
+	       dWEN = 1;
+	       dstore = curr_number;
+	       daddr = 32'h3100;
 	    end
 	  HIT_DONE:
 	    begin

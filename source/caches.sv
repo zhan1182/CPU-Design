@@ -14,10 +14,10 @@ module caches (
   parameter CPUID = 0;
 
   // icache
-  icache  ICACHE(CLK, nRST, dcif, ccif);
+  icache #(.CPUID(CPUID)) ICACHE(CLK, nRST, dcif, ccif);
    
   // dcache
-  dcache  DCACHE (CLK, nRST, dcif, ccif);
+  dcache #(.CPUID(CPUID)) DCACHE (CLK, nRST, dcif, ccif);
 
   // dcache invalidate before halt handled by dcache when exists
   // assign dcif.flushed = dcif.halt;

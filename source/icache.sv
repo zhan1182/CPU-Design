@@ -28,6 +28,10 @@ module icache (
    logic 		  hit;
    logic 		  miss;
    logic 		  valid;
+   // for multicore
+   logic 		  iwait, iREN;
+   word_t iload;
+   
    
    // This is a cache hit
    assign hit = (tag == curr_cache[idx][57:57-ITAG_W+1]) & valid;
@@ -39,6 +43,12 @@ module icache (
    assign idx = dcif.imemaddr[31-ITAG_W:31-ITAG_W-IIDX_W+1];
    assign bytoff = dcif.imemaddr[31-ITAG_W-IIDX_W:0];
 
+   assign iwait = ccif.iwait[CPUID];
+   assign iload = ccif.iload[CPUID];
+   assign ccif.iREN[CPUID] = (hit) ? 0 : 1;
+   assign ccif.iaddr[CPUID] = dcif.imemaddr;
+   
+
    
    always_ff @ (posedge CLK, negedge nRST) begin
       if (nRST == 0) begin
@@ -47,19 +57,18 @@ module icache (
 	 end	 
       end
       else begin
-	 if(~ccif.iwait && miss)
+	 if(~iwait && miss)
 	   begin
-	      curr_cache[idx] <= {1'b1, tag, ccif.iload};
+	      curr_cache[idx] <= {1'b1, tag, iload};
 	   end
       end
    end
 
-   assign ccif.iREN = (hit) ? 0 : 1;
-   assign ccif.iaddr = dcif.imemaddr;
-
-   assign dcif.imemload = (hit) ? curr_cache[idx][31:0] : ((~ccif.iwait) ? ccif.iload : 0);
+   //assign iREN = (hit) ? 0 : 1;
    
-   assign dcif.ihit = hit | (~ccif.iwait && miss);
+   assign dcif.imemload = (hit) ? curr_cache[idx][31:0] : ((~iwait) ? iload : 0);
+   
+   assign dcif.ihit = hit | (~iwait && miss);
    
 
 endmodule // caches
