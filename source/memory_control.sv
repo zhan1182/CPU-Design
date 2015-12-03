@@ -26,10 +26,29 @@ module memory_control (
    logic curr_selected, next_selected, other;
 
    logic curr_i, next_i; //the least used of instruction, curr = 0, use core0 at this time.
+
+   word_t ccsnoopaddr0, ccsnoopaddr1, daddr0, daddr1;
+   logic [1:0] ccwait, ccinv, cctrans, ccwrite, dwait;
    
    
    typedef enum logic [2:0] {IDLE, DW1, DW2, DR1, DR2, IR, SP}coherence_state;
    coherence_state curr_state, next_state;
+   
+   
+   
+   
+   // for coherency
+   assign ccif.ccsnoopaddr[0] = ccsnoopaddr0;
+   assign ccif.ccsnoopaddr[1] = ccsnoopaddr1;
+   
+   assign ccif.ccwait = ccwait;
+   assign ccif.ccinv = ccinv;
+   assign cctrans = ccif.cctrans;
+   assign ccwrite = ccif.ccwrite;
+   assign dwait = ccif.dwait;
+   assign daddr0 = ccif.daddr[0];
+   assign daddr1 = ccif.daddr[1];
+   
    
    
    // assign ccif.ramWEN = ccif.dWEN;
@@ -43,7 +62,7 @@ module memory_control (
 
    // assign ccif.iwait = (ccif.ramstate == ACCESS) ? (((ccif.iREN == 1)&&(ccif.dREN == 0)&&(ccif.dWEN == 0))?0:1):1;
    // assign ccif.dwait = (ccif.ramstate == ACCESS) ? (((ccif.dREN == 1)||(ccif.dWEN == 1))?0:1):1;
-   coherency COH(CLK, nRST, ccif);
+   coherency COH(CLK, nRST, daddr0, daddr1, cctrans, ccwrite, dwait, ccsnoopaddr0, ccsnoopaddr1, ccwait, ccinv);
    
    
    assign other = ~curr_selected;
@@ -70,7 +89,7 @@ module memory_control (
      end // always_ff @ (posedge CLK, negedge nRST)
 
    // state machine controller
-   always_comb
+   always @ (*)
      begin
 	next_state = curr_state;
 	next_selected = curr_selected;

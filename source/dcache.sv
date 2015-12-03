@@ -170,7 +170,7 @@ module dcache (
 	end     
    end // always_ff @
 
-   always_comb
+   always @ (*)
      begin
 	next_state = curr_state;
 	cctrans = 0;
@@ -357,7 +357,7 @@ module dcache (
 	endcase // case (curr_state)
      end
 
-   always_comb
+   always @ (*)
      begin
 
 	dREN = 0;

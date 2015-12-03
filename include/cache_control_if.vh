@@ -77,12 +77,7 @@ interface cache_control_if;
     output  iREN, iaddr, dREN, dWEN, daddr, dstore,
             ccwrite, cctrans
   );
-  // modport caches (
-  //   input   iwait, iload, dwait, dload,
-  //           ccwait, ccinv, ccsnoopaddr,
-  //   output  iREN, iaddr, dREN, dWEN, daddr, dstore,
-  //           ccwrite, cctrans
-  // );
+
 
 //   modport caches (
 //     input   .iwait(iwait[CPUID]), 

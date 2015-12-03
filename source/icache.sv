@@ -45,7 +45,7 @@ module icache (
 
    assign iwait = ccif.iwait[CPUID];
    assign iload = ccif.iload[CPUID];
-   assign ccif.iREN[CPUID] = (hit) ? 0 : 1;
+   assign ccif.iREN[CPUID] = (hit) ? 0 : dcif.imemREN;
    assign ccif.iaddr[CPUID] = dcif.imemaddr;
    
 
