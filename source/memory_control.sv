@@ -24,6 +24,9 @@ module memory_control (
 
 
    logic curr_selected, next_selected, other;
+
+   logic curr_i, next_i; //the least used of instruction, curr = 0, use core0 at this time.
+   
    
    typedef enum logic [2:0] {IDLE, DW1, DW2, DR1, DR2, IR, SP}coherence_state;
    coherence_state curr_state, next_state;
@@ -40,7 +43,9 @@ module memory_control (
 
    // assign ccif.iwait = (ccif.ramstate == ACCESS) ? (((ccif.iREN == 1)&&(ccif.dREN == 0)&&(ccif.dWEN == 0))?0:1):1;
    // assign ccif.dwait = (ccif.ramstate == ACCESS) ? (((ccif.dREN == 1)||(ccif.dWEN == 1))?0:1):1;
-
+   coherency COH(CLK, nRST, ccif);
+   
+   
    assign other = ~curr_selected;
    
    
@@ -50,6 +55,7 @@ module memory_control (
 	  begin
 	     curr_state <= IDLE;
 	     curr_selected <= 0;
+	     curr_i <= 0;
 	     
 	     
 	  end
@@ -57,6 +63,8 @@ module memory_control (
 	  begin
 	     curr_state <= next_state;
 	     curr_selected <= next_selected;
+	     curr_i <= next_i;
+	     
 	     
 	  end
      end // always_ff @ (posedge CLK, negedge nRST)
@@ -66,6 +74,7 @@ module memory_control (
      begin
 	next_state = curr_state;
 	next_selected = curr_selected;
+	next_i = curr_i;
 	
 	
 	case(curr_state)
@@ -73,31 +82,32 @@ module memory_control (
 	    begin
 	       // when data write
 	       if(ccif.dWEN != 2'b00)
-		 begin
-		    next_state = DW1;
-		    next_selected = ccif.dWEN[0] ? 0:1;
+	       	 begin
+	       	    next_state = DW1;
+	       	    next_selected = ccif.dWEN[0] ? 0:1;
 		    
 		    
-		 end
+	       	 end
 	       else if(ccif.dREN != 2'b00)
-		 begin
-		    next_state = DR1;
-		    next_selected = ccif.dREN[0] ? 0 : 1;
-		 end
+	       	 begin
+	       	    next_state = DR1;
+	       	    next_selected = ccif.dREN[0] ? 0 : 1;
+	       	 end
 	       
-	       else if(ccif.cctrans != 2'b00)
-		 begin
-		    next_state = SP;
-		    next_selected = ccif.cctrans[0] ? 0:1;
-		    		    
-		 end
 	       // for instruction iread
 	       else if(ccif.iREN != 2'b00)
-		 begin
-		    next_state = IR;
-		    next_selected = ccif.iREN[0] ? 0:1;
+	       	 begin
+	       	    next_state = IR;
+	       	    if(ccif.iREN != 2'b11)
+	       	      begin
+	       		 next_selected = ccif.iREN[0] ? 0:1;
+	       	      end
+	       	    else
+	       	      begin
+	       		 next_selected = curr_i ? 1:0;
+	       	      end
 		    
-		 end
+	       	 end
 	       
 	    end
 	  DW1:
@@ -105,55 +115,162 @@ module memory_control (
 	       ///????????
 	       if(ccif.ramstate == ACCESS)
 		 begin
-		    next_state = DW2;
-		 end
-	       
-	    end
-	  DW2:
-	    begin
-	       //???????
-	       if(ccif.ramstate == ACCESS)
-		 begin
 		    next_state = IDLE;
+		    
+		    // when data write
+		    // if(ccif.dWEN != 2'b00)
+		    //   begin
+		    // 	 next_state = DW1;
+		    // 	 next_selected = ccif.dWEN[0] ? 0:1;
+			 
+			 
+		    //   end
+		    // else if(ccif.dREN != 2'b00)
+		    //   begin
+		    // 	 next_state = DR1;
+		    // 	 next_selected = ccif.dREN[0] ? 0 : 1;
+		    //   end
+		    
+		    // // for instruction iread
+		    // else if(ccif.iREN != 2'b00)
+		    //   begin
+		    // 	 next_state = IR;
+		    // 	 if(ccif.iREN != 2'b11)
+		    // 	   begin
+		    // 	      next_selected = ccif.iREN[0] ? 0:1;
+		    // 	   end
+		    // 	 else
+		    // 	   begin
+		    // 	      next_selected = curr_i ? 1:0;
+		    // 	   end
+			 
+		    //   end // if (ccif.iREN != 2'b00)
+		    // else
+		    //   begin
+		    // 	 next_state = IDLE;
+		    //   end // else: !if(ccif.iREN != 2'b00)
+		    
 		 end
 	       
 	    end
+	  // DW2:
+	  //   begin
+	  //      //???????
+	  //      if(ccif.ramstate == ACCESS)
+	  // 	 begin
+	  // 	    next_state = IDLE;
+	  // 	 end
+	       
+	  //   end
 	  DR1:
 	    begin
 	       if(ccif.ramstate == ACCESS)
 		 begin
-		    next_state = DR2;
+		    next_state = IDLE;
+		    //when data write
+		    // if(ccif.dWEN != 2'b00)
+		    //   begin
+		    // 	 next_state = DW1;
+		    // 	 next_selected = ccif.dWEN[0] ? 0:1;
+			 
+			 
+		    //   end
+		    // else if(ccif.dREN != 2'b00)
+		    //   begin
+		    // 	 next_state = DR1;
+		    // 	 next_selected = ccif.dREN[0] ? 0 : 1;
+		    //   end
+		    
+		    // // for instruction iread
+		    // else if(ccif.iREN != 2'b00)
+		    //   begin
+		    // 	 next_state = IR;
+		    // 	 if(ccif.iREN != 2'b11)
+		    // 	   begin
+		    // 	      next_selected = ccif.iREN[0] ? 0:1;
+		    // 	   end
+		    // 	 else
+		    // 	   begin
+		    // 	      next_selected = curr_i ? 1:0;
+		    // 	   end
+			 
+		    //   end // if (ccif.iREN != 2'b00)
+		    // else
+		    //   begin
+		    // 	 next_state = IDLE;
+		    //   end // else: !if(ccif.iREN != 2'b00)
+		    
 		 end
 	       
 	    end
-	  DR2:
-	    begin
-	       if(ccif.ramstate == ACCESS)
-		 begin
-		    next_state = IDLE;
-		 end
+	  // DR2:
+	  //   begin
+	  //      if(ccif.ramstate == ACCESS)
+	  // 	 begin
+	  // 	    next_state = IDLE;
+	  // 	 end
 	       
 
-	    end
+	  //   end
 	  IR:
 	    begin
 	       if(ccif.ramstate == ACCESS)
 		 begin
 		    next_state = IDLE;
+		    next_i = curr_i ? 0 : 1;
+		    // when data write
+		    // if(ccif.dWEN != 2'b00)
+		    //   begin
+		    // 	 next_state = DW1;
+		    // 	 next_selected = ccif.dWEN[0] ? 0:1;
+			 
+			 
+		    //   end
+		    // else if(ccif.dREN != 2'b00)
+		    //   begin
+		    // 	 next_state = DR1;
+		    // 	 next_selected = ccif.dREN[0] ? 0 : 1;
+		    //   end
+		    
+		    // // for instruction iread
+		    // else if(ccif.iREN != 2'b00)
+		    //   begin
+		    // 	 next_state = IR;
+		    // 	 if(ccif.iREN != 2'b11)
+		    // 	   begin
+		    // 	      next_selected = ccif.iREN[0] ? 0:1;
+		    // 	   end
+		    // 	 else
+		    // 	   begin
+		    // 	      next_selected = curr_i ? 1:0;
+		    // 	   end
+			 
+		    //   end // if (ccif.iREN != 2'b00)
+		    // else
+		    //   begin
+		    // 	 next_state = IDLE;
+		    //   end // else: !if(ccif.iREN != 2'b00)
+		    
+		    
 		 end
 	       
 
 	    end
-	  SP:
-	    begin
-	       if(ccif.ccwrite[other] == 1)
-		 begin
-		    next_state = DW1;
-		    next_selected = other;
+	  // SP:
+	  //   begin
+	  //      if(ccif.ccwrite[other] == 1)
+	  // 	 begin
+	  // 	    next_state = DW1;
+	  // 	    next_selected = other;
 		    
-		 end
+	  // 	 end
+	  //      else
+	  // 	 begin
+	  // 	    next_state = IDLE;
+	  // 	 end
+	       
 
-	    end
+	  //   end
 	  
 	  
 
@@ -164,16 +281,14 @@ module memory_control (
 
 
       // memory/ram controller
-   always_comb
+   always @ (*)
      begin
         ccif.ramstore = 0;
 	ccif.ramaddr = 0;
 	ccif.ramWEN = 0;
 	ccif.ramREN = 0;
 
-	ccif.ccwait = 0;
-	ccif.ccinv = 0;
-	ccif.ccsnoopaddr = ccif.daddr;
+	
 
 	ccif.iwait = 2'b11;
 	ccif.dwait = 2'b11;
@@ -186,11 +301,7 @@ module memory_control (
 	case(curr_state)
 	  IDLE:
 	    begin
-	       if(ccif.cctrans != 2'b00)
-		 begin
-		    ccif.ccwait[ccif.cctrans[0]?1:0] = 1;
-		 end
-	       
+
 	       
 	    end
 	  DW1:
@@ -198,7 +309,7 @@ module memory_control (
 	       ccif.ramstore = ccif.dstore[curr_selected];
 	       ccif.ramaddr = ccif.daddr[curr_selected];
 	       ccif.ramWEN = 1;
-	       ccif.ccwait[curr_selected] = 1;
+	       //ccif.ccwait[curr_selected] = 1;
 	       
 	       ccif.iwait[curr_selected] = 1;
 	       if(ccif.ramstate == ACCESS)
@@ -207,43 +318,55 @@ module memory_control (
 		 end
 	       
 	    end
-	  DW2:
-	    begin
-	       ccif.ramstore = ccif.dstore[curr_selected];
-	       ccif.ramaddr = ccif.daddr[curr_selected];
-	       ccif.ramWEN = 1;
-	       ccif.ccwait[curr_selected] = 1;
+	  // DW2:
+	  //   begin
+	  //      ccif.ramstore = ccif.dstore[curr_selected];
+	  //      ccif.ramaddr = ccif.daddr[curr_selected];
+	  //      ccif.ramWEN = 1;
+	  //      //ccif.ccwait[curr_selected] = 1;
 	       
-	       ccif.iwait[curr_selected] = 1;
-	       if(ccif.ramstate == ACCESS)
-		 begin
-		    ccif.dwait[curr_selected] = 0;
-		 end
-	    end
+	  //      ccif.iwait[curr_selected] = 1;
+	  //      if(ccif.ramstate == ACCESS)
+	  // 	 begin
+	  // 	    ccif.dwait[curr_selected] = 0;
+	  // 	 end
+	  //   end
 	  DR1:
 	    begin
-	       ccif.ramREN = 1;
+	       
 	       ccif.ramaddr = ccif.daddr[curr_selected];
-
-	       ccif.dload[curr_selected] = ccif.ramload;
-	       if(ccif.ramstate == ACCESS)
+	       if(ccif.ccwait[other] && ccif.ccwrite[other])
 		 begin
 		    ccif.dwait[curr_selected] = 0;
+		    ccif.dload[curr_selected] = ccif.dstore[other];
 		    
-		 end
-	    end
-	  DR2:
-	    begin
-	       ccif.ramREN = 1;
-	       ccif.ramaddr = ccif.daddr[curr_selected];
 
-	       ccif.dload[curr_selected] = ccif.ramload;
-	       if(ccif.ramstate == ACCESS)
-		 begin
-		    ccif.dwait[curr_selected] = 0;
-		    
 		 end
+	       else
+		 begin
+		    
+		    ccif.ramREN = 1;
+		    ccif.dload[curr_selected] = ccif.ramload;
+		    if(ccif.ramstate == ACCESS)
+		      begin
+			 ccif.dwait[curr_selected] = 0;
+			 
+		      end
+		 end // else: !if(ccif.ccwait[other] && ccif.ccwrite[other])
+	       
 	    end
+	  // DR2:
+	  //   begin
+	  //      ccif.ramREN = 1;
+	  //      ccif.ramaddr = ccif.daddr[curr_selected];
+
+	  //      ccif.dload[curr_selected] = ccif.ramload;
+	  //      if(ccif.ramstate == ACCESS)
+	  // 	 begin
+	  // 	    ccif.dwait[curr_selected] = 0;
+		    
+	  // 	 end
+	  //   end
 	  IR:
 	    begin
 	       ccif.ramREN = 1;
@@ -256,30 +379,30 @@ module memory_control (
 		 end
 	       
 	    end
-	  SP:
-	    begin
-	       ccif.ramstore = ccif.dstore[other];
-	       ccif.ramaddr = ccif.daddr[other];
-	       ccif.ramWEN = ccif.dWEN[other];
+	  // SP:
+	  //   begin
+	  //      ccif.ramstore = ccif.dstore[other];
+	  //      ccif.ramaddr = ccif.daddr[other];
+	  //      ccif.ramWEN = ccif.dWEN[other];
 	       
-	       ccif.ccwait[other] = 1;
-	       ccif.ccinv[other] = ccif.ccwrite[curr_selected];
+	  //      ccif.ccwait[other] = 1;
+	  //      ccif.ccinv[other] = ccif.ccwrite[curr_selected];
 
-	       if(curr_selected == 1)
-		 begin
-		    ccif.dload[curr_selected] = ccif.dWEN[other] ? ccif.dstore[other] : 32'hBAD1BAD1; //????
-		 end
-	       else
-		 begin
-		    ccif.dload[curr_selected] = ccif.dWEN[other] ? ccif.dstore[other] : 32'hBAD0BAD0; //????
-		 end
+	  //      if(curr_selected == 1)
+	  // 	 begin
+	  // 	    ccif.dload[curr_selected] = ccif.dWEN[other] ? ccif.dstore[other] : 32'hBAD1BAD1; //????
+	  // 	 end
+	  //      else
+	  // 	 begin
+	  // 	    ccif.dload[curr_selected] = ccif.dWEN[other] ? ccif.dstore[other] : 32'hBAD0BAD0; //????
+	  // 	 end
 	       
-	       if(ccif.ramstate == ACCESS)
-		 begin
-		    ccif.dwait = ccif.dWEN[other] ? 0 : 2'b11;
-		 end
+	  //      if(ccif.ramstate == ACCESS)
+	  // 	 begin
+	  // 	    ccif.dwait = ccif.dWEN[other] ? 0 : 2'b11;
+	  // 	 end
 	       
-	    end
+	  //   end
 	  
 
 

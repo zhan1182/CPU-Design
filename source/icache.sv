@@ -64,7 +64,7 @@ module icache (
       end
    end
 
-   //assign iREN = (hit) ? 0 : 1;
+   assign iREN = (hit) ? 0 : 1;
    
    assign dcif.imemload = (hit) ? curr_cache[idx][31:0] : ((~iwait) ? iload : 0);
    

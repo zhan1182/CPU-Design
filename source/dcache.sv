@@ -95,14 +95,15 @@ module dcache (
 
 
    // for multicore snoop
-   assign sp_tag = ccif.ccsnoopaddr[31:6];
-   assign sp_idx = ccif.ccsnoopaddr[5:3];
+   
+   assign ccsnoopaddr = ccif.ccsnoopaddr[CPUID];
+   assign sp_tag = ccsnoopaddr[31:6];
+   assign sp_idx = ccsnoopaddr[5:3];
    assign sp_cache = (sp_tag == curr_cache0[sp_idx][89:64]) ? 2'b00 : (sp_tag == curr_cache1[sp_idx][89:64]) ? 2'b01 : 2'b11; // choose which cache to use
    // if sp_core is 00, match cache0, 01 -> cache1, 11 -> no match
-   assign sp_blk = ccif.ccsnoopaddr[2];
+   assign sp_blk = ccsnoopaddr[2];
    assign ccwait = ccif.ccwait[CPUID];
    assign ccinv = ccif.ccinv[CPUID];
-   assign ccsnoopaddr = ccif.ccsnoopaddr[CPUID];
    assign ccif.ccwrite[CPUID] = ccwrite;
    assign ccif.cctrans[CPUID] = cctrans;
    assign sp_cache0_data = sp_blk ? curr_cache0[sp_idx][63:32] : curr_cache0[sp_idx][31:0];
@@ -118,8 +119,8 @@ module dcache (
    assign ccif.dstore[CPUID] = dstore;
    assign sp2_ccsnoopaddr = sp_blk ? ccsnoopaddr - 4 : ccsnoopaddr + 4;
    
-   assign sp1_daddr1 = {curr_cache1[sp_idx][89:64], sp_idx, sp_blk, 2'b00};
-   assign sp1_daddr0 = {curr_cache0[sp_idx][89:64], sp_idx, sp_blk, 2'b00};
+   assign sp1_daddr1 = {curr_cache1[sp_idx][89:64], ccsnoopaddr[5:2], 2'b00};
+   assign sp1_daddr0 = {curr_cache0[sp_idx][89:64], ccsnoopaddr[5:2], 2'b00};
    assign sp2_daddr1 = {curr_cache1[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
    assign sp2_daddr0 = {curr_cache0[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
    
@@ -201,11 +202,12 @@ module dcache (
 	    end
 	  READ1:
 	    begin
+	       cctrans = 1;
+	       
 	       if (dwait == 0) 
 		 begin
 		    next_state = READ2;
 		 end
-	       cctrans = 1;
 	       
 	    end
 	  READ2:
@@ -334,7 +336,7 @@ module dcache (
 	    begin
 	       if(cache1_done)
 		 begin
-		    next_state = HIT_WRITE;
+		    next_state = DONE;
 		 end
 	    end
 	  HIT_WRITE:// Write number of hit to ram
@@ -417,7 +419,7 @@ module dcache (
 			   end
 		      end
 		 end
-	       else if(dcif.dmemWEN)
+	       else if(dcif.dmemWEN && !ccwait)
 		 begin
 		    if(hit0)
 		      begin
@@ -613,6 +615,18 @@ module dcache (
 	       if(sp_cache != 2'b11)
 		 begin
 		    // when match
+		    if(sp_cache == 2'b00)
+		      begin
+	        
+			 dstore = sp_blk ? curr_cache0[sp_idx][63:32] : curr_cache0[sp_idx][31:0];
+			 
+		      end
+		    else
+		      begin
+	        
+			 dstore = sp_blk ? curr_cache1[sp_idx][31:0] : curr_cache0[sp_idx][63:32];
+			 
+		      end
 		    if(!ccinv)
 		      begin
 			 if(sp_cache == 2'b00 && sp_dirty0)
@@ -715,10 +729,14 @@ module dcache (
 		    daddr = {curr_cache0[curr_idx0][89:64], curr_idx0[2:0], curr_blkoff0, 2'b0};
 		    if(dwait == 0 && curr_blkoff0 == 0)
 		      begin
+
+			 
 			 next_blkoff0 = 1;
 		      end
 		    else if(dwait == 0 && curr_blkoff0 == 1)
 		      begin
+
+			 
 			 next_blkoff0 = 0;
 			 next_idx0 = curr_idx0 + 1;
 		      end
@@ -740,10 +758,13 @@ module dcache (
 		    daddr = {curr_cache1[curr_idx1][89:64], curr_idx1[2:0], curr_blkoff1, 2'b0};
 		    if(dwait == 0 && curr_blkoff1 == 0)
 		      begin
+        
+			 
 			 next_blkoff1 = 1;
 		      end
 		    else if(dwait == 0 && curr_blkoff1 == 1)
 		      begin
+
 			 next_blkoff1 = 0;
 			 next_idx1 = curr_idx1 + 1;
 		      end
@@ -755,7 +776,7 @@ module dcache (
 	    end
 	  HIT_WRITE:
 	    begin
-	       dWEN = 1;
+	       //dWEN = 1;
 	       dstore = curr_number;
 	       daddr = 32'h3100;
 	    end
