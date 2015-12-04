@@ -40,6 +40,7 @@ module control_unit
 
 	// overflow flag
 	cu_if.overflow_flag = 0;
+	cu_if.atomic = 0;
 	
 	
 	casez(instr.opcode)
@@ -286,13 +287,46 @@ module control_unit
 	    end
 	  LL:// No need
 	    begin
+
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       // alu calculates the addr for ram
+	       cu_if.ALUcode = ALU_ADD;
+	       // halt if overflow happens
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       
+	       cu_if.RegDest = 1;
+	       // Choose the data from ram
+	       cu_if.MemReg = 1;
+	       // Use imm
+	       cu_if.shamt_en = 1;
+	       // Enable ram data read
+	       cu_if.dREN = 1;
 	       // disable register write enable
-	       cu_if.WEN = 0;
+
+	       cu_if.atomic = 1;
+	       
+	       
 	    end
 	  SC:// No need
 	    begin
-	       // disable register write enable
 	       cu_if.WEN = 0;
+	       // sign ext
+	       cu_if.sign_ext = 1;
+	       // alu calculates the addr for ram
+	       cu_if.ALUcode = ALU_ADD;
+	       // halt if overflow happens
+	       cu_if.overflow_flag = 1;
+	       // cu_if.halt = (cu_if.overflow == 1) ? 1:0;
+	       
+	       // cu_if.RegDest = 1;
+	       // Enable ram data write
+	       cu_if.dWEN = 1;
+	       // use imm
+	       cu_if.shamt_en = 1;
+	       cu_if.atomic = 1;
+	       
 	    end
 	  HALT:
 	    begin

@@ -31,6 +31,9 @@ interface control_unit_if;
 
    // overflow flag 
    logic overflow_flag;
+
+   logic atomic;
+   
    
    aluop_t ALUcode;
    
@@ -40,11 +43,11 @@ interface control_unit_if;
   // control unit ports
   modport cu (
 	      input  instruction,
-	      output halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag
+	      output halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag, atomic
   );
   // control unit tb
   modport cutb (
-  		input  halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag,
+  		input  halt, iREN, dREN, dWEN, sign_ext, j, jr, jal, lui, shamt_en, ALUSrc, PCSrc, RegDest, ALUcode, MemReg, bne, WEN, overflow_flag, atomic,
 		output instruction
   );
 endinterface
