@@ -140,6 +140,8 @@ module datapath (
    assign pr_if.RegDst_in_2 = cu_if.RegDest;
    assign pr_if.ALUOP_in_2 = cu_if.ALUcode;
    assign pr_if.MemtoReg_in_2 = cu_if.MemReg;
+   assign pr_if.datomic = cu_if.atomic;
+   
    
    // Conncet register file
    assign rf_if.rsel1 = pr_if.instr_out_1[25:21];
