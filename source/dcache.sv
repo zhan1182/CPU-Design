@@ -56,6 +56,12 @@ module dcache (
    logic 		  dREN, dWEN;
    word_t dload, dstore, daddr;
    
+   // for linked load and store check
+   logic [32:0] 	  curr_linkReg, next_linkReg;
+   logic 		  linkValid;
+   logic [31:0] 	  linkAddr;
+   
+   logic 		  storePass;
    
    
    
@@ -125,9 +131,14 @@ module dcache (
    assign sp2_daddr0 = {curr_cache0[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
 
    // for LL & SC
-   assign ccif.LLSCaddr[CPUID] = curr_linkReg[31:0];
+   
    
 
+   assign linkValid = curr_linkReg[32];
+   assign linkAddr = curr_linkReg[31:0];
+   assign storePass = (dcif.datomic) ? ((curr_linkReg[31:0] != dcif.dmemaddr || !linkValid) ? 0:1):1;
+
+   assign ccif.LLSCaddr[CPUID] = curr_linkReg[31:0];
    
    always_ff @ (posedge CLK, negedge nRST) 
      begin
@@ -140,7 +151,8 @@ module dcache (
 	     
 	     curr_idx1 <= 0;
 	     curr_blkoff1 <= 0;
-
+	     curr_linkReg <= 0;
+	     
 	     curr_number <= 0;
 	     for(i = 0; i < 8; i++)begin
 		curr_cache0[i] <= 0;
@@ -160,7 +172,9 @@ module dcache (
 	     curr_cache0 <= next_cache0;
 	     curr_cache1 <= next_cache1;
 
-	     curr_number = next_number;	     
+	     curr_number = next_number;	 
+	     curr_linkReg <= next_linkReg;
+	     
 	  end
      end // always_ff @
    
@@ -392,6 +406,7 @@ module dcache (
 
 	ccwrite = ccwait ? 0 : dcif.dmemWEN;
 
+	next_linkReg = curr_linkReg;
 	
 	
 	
@@ -401,6 +416,13 @@ module dcache (
 	       
 	       if(dcif.dmemREN && !ccwait)
 		 begin
+		    //for linked load
+		    if(dcif.datomic == 1)
+		      begin
+			 next_linkReg = {1'b1, dcif.dmemaddr};
+		      end
+		    
+			 
 		    if(hit0)
 		      begin
 			 if(dcif.halt == 0)
@@ -426,6 +448,15 @@ module dcache (
 		 end
 	       else if(dcif.dmemWEN && !ccwait)
 		 begin
+		    // if(!storePass)
+		    //   begin
+		    // 	 dcif.dhit = 1;
+			 
+		    if(!dcif.datomic && curr_linkReg[31:0] == dcif.dmemaddr)
+		      begin
+			 next_linkReg[32] = 0;
+		      end
+		    
 		    if(hit0)
 		      begin
 			 if(dcif.halt == 0)
