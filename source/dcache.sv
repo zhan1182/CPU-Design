@@ -123,6 +123,11 @@ module dcache (
    assign sp1_daddr0 = {curr_cache0[sp_idx][89:64], ccsnoopaddr[5:2], 2'b00};
    assign sp2_daddr1 = {curr_cache1[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
    assign sp2_daddr0 = {curr_cache0[sp_idx][89:64], sp2_ccsnoopaddr[5:2], 2'b00};
+
+   // for LL & SC
+   assign ccif.LLSCaddr[CPUID] = curr_linkReg[31:0];
+   
+
    
    always_ff @ (posedge CLK, negedge nRST) 
      begin

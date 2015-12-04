@@ -37,6 +37,14 @@ interface cache_control_if;
   logic   [CPUS-1:0]      ccwrite, cctrans;
   word_t  [CPUS-1:0]      ccsnoopaddr;
 
+
+   // for LL and SC
+   logic [CPUS-1:0] 	  LLSCchecking;
+   logic [CPUS-1:0] 	  LLSCinv;
+   word_t [CPUS-1:0] LLSCaddr;
+   
+
+   
   // ram side
   logic                   ramWEN, ramREN;
   ramstate_t              ramstate;

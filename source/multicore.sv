@@ -29,7 +29,7 @@ parameter PC1 = 'h200;
   caches #(.CPUID(0))       CM0 (CLK, nRST, dcif0, ccif);
   caches #(.CPUID(1))       CM1 (CLK, nRST, dcif1, ccif);
   // map coherence
-   memory_control            CC (CLK, nRST, ccif);
+   memory_control            CC (CLK, nRST, ccif, dcif0.dmemaddr, dcif1.dmemaddr);
 
   // interface connections
   assign scif.memaddr = ccif.ramaddr;

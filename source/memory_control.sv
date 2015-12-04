@@ -14,7 +14,9 @@
 
 module memory_control (
   input CLK, nRST,
-  cache_control_if.cc ccif
+  cache_control_if.cc ccif,
+  input logic [31:0] dmemaddr0,
+  input logic [31:0] dmemaddr1
 );
   // type import
   import cpu_types_pkg::*;
@@ -30,6 +32,9 @@ module memory_control (
    word_t ccsnoopaddr0, ccsnoopaddr1, daddr0, daddr1;
    logic [1:0] ccwait, ccinv, cctrans, ccwrite, dwait;
    
+   // for LL & SC
+   logic [1:0] LLSCchecking, LLSCinv;
+   word_t [1:0] LLSCaddr;
    
    typedef enum logic [2:0] {IDLE, DW1, DW2, DR1, DR2, IR, SP}coherence_state;
    coherence_state curr_state, next_state;
@@ -49,6 +54,10 @@ module memory_control (
    assign daddr0 = ccif.daddr[0];
    assign daddr1 = ccif.daddr[1];
    
+   // for LL&SC
+   assign LLSCchecking = ccif.LLSCchecking;
+   assign LLSCaddr = ccif.LLSCaddr;
+   assign ccif.LLSCinv = LLSCinv;
    
    
    // assign ccif.ramWEN = ccif.dWEN;
@@ -66,6 +75,21 @@ module memory_control (
    
    
    assign other = ~curr_selected;
+
+   // for LL & SC
+   always_comb
+     begin
+	LLSCinv = 2'b00;
+
+	if(LLSCchecking[0] && dmemaddr0 == LLSCaddr[1])
+	  begin
+	     LLSCinv[1] = 1;
+	  end
+	else if(LLSCchecking[1] && dmemaddr1 == LLSCaddr[0])
+	  begin
+	     LLSCinv[0] = 1;
+	  end
+     end // always_comb
    
    
    always_ff @ (posedge CLK, negedge nRST)
