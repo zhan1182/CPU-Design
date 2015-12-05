@@ -42,6 +42,7 @@ interface cache_control_if;
    logic [CPUS-1:0] 	  LLSCchecking;
    logic [CPUS-1:0] 	  LLSCinv;
    word_t [CPUS-1:0] LLSCaddr;
+   logic [CPUS-1:0][1:0]  LLSCresult;
    
 
    

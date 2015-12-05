@@ -62,6 +62,8 @@ module dcache (
    logic [31:0] 	  linkAddr;
    
    logic 		  storePass;
+   logic 		  LLSCchecking, LLSCinv;
+   logic [1:0] 		  LLSCresult;
    
    
    
@@ -132,13 +134,15 @@ module dcache (
 
    // for LL & SC
    
-   
-
    assign linkValid = curr_linkReg[32];
    assign linkAddr = curr_linkReg[31:0];
    assign storePass = (dcif.datomic) ? ((curr_linkReg[31:0] != dcif.dmemaddr || !linkValid) ? 0:1):1;
 
    assign ccif.LLSCaddr[CPUID] = curr_linkReg[31:0];
+   assign ccif.LLSCchecking[CPUID] = LLSCchecking;
+   assign LLSCinv = ccif.LLSCinv[CPUID];
+   assign ccif.LLSCresult[CPUID] = LLSCresult;
+   
    
    always_ff @ (posedge CLK, negedge nRST) 
      begin
@@ -191,8 +195,8 @@ module dcache (
 
    always @ (*)
      begin
-	next_state = curr_state;
-	cctrans = 0;
+	next_state = (curr_state == IDLE && dcif.dmemWEN && !ccwait && !storePass) ? IDLE : curr_state;
+	//cctrans = 0;
 	
 	case(curr_state)
 	  IDLE:
@@ -209,19 +213,33 @@ module dcache (
 	       else if(miss && dirty && valid && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = WRITE1;
-		    cctrans = 1;
+		    //cctrans = 1;
+		    // if(storePass && dcif.datomic)
+		    //   begin
+		    // 	 if(linkValid && linkAddr == dcif.dmemaddr)
+		    // 	   begin
+		    // 	      next_state = WRITE1;
+		    // 	      cctrans = 1;
+		    // 	   end
+		    //   end
+		    // else
+		    //   begin
+		    // 	 next_state = WRITE1;
+		    // 	 cctrans = 1;
+		    //   end // else: !if(storePass && dcif.datomic)
+		    
 		    
 		 end
 	       else if(miss && dirty == 0 && (dcif.dmemREN || dcif.dmemWEN))
 		 begin
 		    next_state = READ1;
-		    cctrans = 1;
+		    //cctrans = 1;
 		    
 		 end
 	    end
 	  READ1:
 	    begin
-	       cctrans = 1;
+	       //cctrans = 1;
 	       
 	       if (dwait == 0) 
 		 begin
@@ -231,12 +249,12 @@ module dcache (
 	    end
 	  READ2:
 	    begin
-	       cctrans = 1;
+	       //cctrans = 1;
 	       
 	       if (dwait == 0) 
 		 begin
 		    next_state = IDLE;
-		    cctrans = 0;
+		    //cctrans = 0;
 		    
 		 end
 	    end
@@ -249,7 +267,7 @@ module dcache (
 	  
 	  WRITE1:
 	    begin
-	       cctrans = 1;
+	       //cctrans = 1;
 	       
 	       if (dwait == 0) 
 		 begin
@@ -258,11 +276,11 @@ module dcache (
 	    end
 	  WRITE2:
 	    begin
-	       cctrans = 1;
+	       //cctrans = 1;
 	       
 	       if (dwait == 0) 
 		 begin
-		    cctrans = 0;
+		    //cctrans = 0;
 		    
 		    next_state = (dcif.dmemREN || dcif.dmemWEN) ? READ1:IDLE;
 		 end
@@ -407,12 +425,56 @@ module dcache (
 	ccwrite = ccwait ? 0 : dcif.dmemWEN;
 
 	next_linkReg = curr_linkReg;
+	LLSCchecking = 0;
+	LLSCresult = 2'b11;
+
+	cctrans = 0;
+	
+
+	if(LLSCinv)
+	  begin
+	     next_linkReg[32] = 0;
+	  end
 	
 	
 	
 	case(curr_state)
 	  IDLE:
 	    begin
+	       if(dcif.halt == 1) 
+		 begin
+		    //next_state = FLUSH0;
+		 end
+	       else if(ccwait) // if ccwait, then check snoop
+		 begin
+		    //next_state = SPCHK;
+		 end
+	       else if(miss && dirty && valid && (dcif.dmemREN || dcif.dmemWEN))
+		 begin
+		    //next_state = WRITE1;
+		    cctrans = 1;
+		    // if(storePass && dcif.datomic)
+		    //   begin
+		    // 	 if(linkValid && linkAddr == dcif.dmemaddr)
+		    // 	   begin
+		    // 	      next_state = WRITE1;
+		    // 	      cctrans = 1;
+		    // 	   end
+		    //   end
+		    // else
+		    //   begin
+		    // 	 next_state = WRITE1;
+		    // 	 cctrans = 1;
+		    //   end // else: !if(storePass && dcif.datomic)
+		    
+		    
+		 end
+	       else if(miss && dirty == 0 && (dcif.dmemREN || dcif.dmemWEN))
+		 begin
+		    //next_state = READ1;
+		    cctrans = 1;
+		    
+		 end
 	       
 	       if(dcif.dmemREN && !ccwait)
 		 begin
@@ -451,69 +513,100 @@ module dcache (
 		    // if(!storePass)
 		    //   begin
 		    // 	 dcif.dhit = 1;
-			 
-		    if(!dcif.datomic && curr_linkReg[31:0] == dcif.dmemaddr)
+
+		    LLSCchecking = 1;
+
+		    if(dcif.datomic && curr_linkReg[31:0] == dcif.dmemaddr)
 		      begin
 			 next_linkReg[32] = 0;
 		      end
-		    
-		    if(hit0)
+
+		    if(!storePass)
 		      begin
-			 if(dcif.halt == 0)
+			 dcif.dhit = 1; // ?????????????
+			 LLSCresult = 2'b00;
+			 
+		      end
+		    
+		    else
+		      begin
+			 
+			 if(hit0)
 			   begin
-			      // increment hit number
-			      next_number = curr_number + 1;
-			      
-			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-			      
-			      next_used[info.idx] = 1;
-			      // Assign dirty to 1. The data is dirty, only exists in cache, need to be writen back to ram
-			      next_cache0[info.idx][90] = 1;
-			      next_cache0[info.idx][91] = 1;// Assign valid1 to 1
-			      next_cache0[info.idx][89:64] = info.tag;
-			      if (info.blkoff == 1) 
+			      if(dcif.halt == 0)
 				begin
-				   next_cache0[info.idx][63:32] = dcif.dmemstore;
-				end
-			      else 
-				begin
-				   next_cache0[info.idx][31:0] = dcif.dmemstore;
+				   // increment hit number
+				   next_number = curr_number + 1;
+				   
+				   dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+				   
+				   next_used[info.idx] = 1;
+				   // Assign dirty to 1. The data is dirty, only exists in cache, need to be writen back to ram
+				   next_cache0[info.idx][90] = 1;
+				   next_cache0[info.idx][91] = 1;// Assign valid1 to 1
+				   next_cache0[info.idx][89:64] = info.tag;
+				   if (info.blkoff == 1) 
+				     begin
+					next_cache0[info.idx][63:32] = dcif.dmemstore;
+				     end
+				   else 
+				     begin
+					next_cache0[info.idx][31:0] = dcif.dmemstore;
+				     end
+				   if(dcif.datomic)
+				     begin
+					next_linkReg[32] = 0;
+					LLSCresult = 2'b01;
+					
+				     end
+				   
 				end
 			   end
-		      end
-		    else if(hit1)
-		      begin
-			 if(dcif.halt == 0)
+			 else if(hit1)
 			   begin
-			      // increment hit number
-			      next_number = curr_number + 1;
-			      
-			      dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
-			      
-			      next_used[info.idx] = 0;
-			      
-			      next_cache1[info.idx][90] = 1;
-			      next_cache1[info.idx][91] = 1;
-			      next_cache1[info.idx][89:64] = info.tag;
-			      if (info.blkoff == 1) 
+			      if(dcif.halt == 0)
 				begin
-				   next_cache1[info.idx][63:32] = dcif.dmemstore;
-				end
-			      else 
-				begin
-				   next_cache1[info.idx][31:0] = dcif.dmemstore;
-				end
-			   end // if (dcif.halt == 0)
-		      end // if (hit1)
+				   // increment hit number
+				   next_number = curr_number + 1;
+				   
+				   dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+				   
+				   next_used[info.idx] = 0;
+				   
+				   next_cache1[info.idx][90] = 1;
+				   next_cache1[info.idx][91] = 1;
+				   next_cache1[info.idx][89:64] = info.tag;
+				   if (info.blkoff == 1) 
+				     begin
+					next_cache1[info.idx][63:32] = dcif.dmemstore;
+				     end
+				   else 
+				     begin
+					next_cache1[info.idx][31:0] = dcif.dmemstore;
+				     end
+				   if(dcif.datomic)
+				     begin
+					next_linkReg[32] = 0;
+					LLSCresult = 2'b01;
+					
+				     end
+				end // if (dcif.halt == 0)
+			   end // if (hit1)
+		      end // else: !if(!storePass)
+		    
+		    
 		 end // if (dcif.dmemWEN)
 	    end // case: IDLE
 	  READ1:
 	    begin
 	       dREN = 1;
 	       daddr = dcif.dmemaddr;
-
+	       cctrans = 1;
+	       
 	       if(dwait == 0)
 		 begin
+		    cctrans = 1;
+		    
 		    // dcif.dmemload = ccif.dload;
 		    if(curr_used[info.idx])
 		      begin
@@ -549,11 +642,16 @@ module dcache (
 	    end
 	  READ2:
 	    begin
+	       cctrans = 1;
+	       
 	       dREN = 1;
 	       daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
 	       if(dwait == 0)
 		 begin
 		    dcif.dhit = 1; // Set dhit to 1 to inform datapath data is ready
+		    cctrans = 0;
+		    
+			 
 		    
 		    if(curr_used[info.idx])
 		      begin
@@ -603,11 +701,28 @@ module dcache (
 			   end
 		      end // else: !if(curr_used)
 
+		    if(dcif.dmemWEN)
+		      begin
+			 // for SC
+			 if(dcif.datomic)
+			   begin
+			      next_linkReg[32] = 0;
+			      LLSCresult = 2'b01;
+			      
+			   end
+		      end
+		    
 		 end // if (ccif.dwait == 0)
 	       
 	    end // case: READ2
 	  WRITE1:
 	    begin
+	       cctrans = 1;
+	       if(!dwait)
+		 begin
+		    cctrans = 0;
+		 end
+	       
 	       // Turn on MEM write enable
 	       dWEN = 1;
 	       //ccif.daddr = dcif.dmemaddr;
@@ -627,7 +742,11 @@ module dcache (
 	  WRITE2:
 	    begin
 	       dWEN = 1;
-
+	       cctrans = 1;
+	       if(!dwait)
+		 begin
+		    cctrans = 0;
+		 end
 	       // Calculate the data address
 	       //ccif.daddr = info.blkoff ? dcif.dmemaddr - 4 : dcif.dmemaddr + 4;
 	       
@@ -682,6 +801,11 @@ module dcache (
 		      end // if (!ccinv)
 		    else
 		      begin
+			 if(ccsnoopaddr == linkAddr)
+			   begin
+			      next_linkReg[32] = 0;
+			   end
+			 
 			 if(sp_cache == 2'b00 && sp_dirty0)
 			   begin
 			      // cache0: M to I

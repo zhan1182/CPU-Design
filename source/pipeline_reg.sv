@@ -63,6 +63,9 @@ module pipeline_reg(
 	 prif.halt_or_out_3 <= 0;
 
 	 prif.RegWrite_out_3 <= 0;
+	 prif.atomic_out_2 <= 0;
+	 prif.atomic_out_3 <= 0;
+	 
 	 
 	 
       end // if (nRST == 0)
@@ -114,7 +117,9 @@ module pipeline_reg(
 	   prif.bne_out_3 <= 0;
 	   prif.beq_out_3 <= 0;
 	   // part of fourth reg
-
+	   prif.atomic_out_2 <= 0;
+	   prif.atomic_out_3 <= 0;
+	 
 
 	   
 	end
@@ -169,6 +174,8 @@ module pipeline_reg(
 	 prif.bne_out_3 <= prif.bne_in_3;
 	 prif.beq_out_3 <= prif.beq_in_3;
 	 // deleted memtoreg	 
+	 prif.atomic_out_2 <= prif.atomic_in_2;
+	 prif.atomic_out_3 <= prif.atomic_in_3;
 	 
       end // else: !if(nRST == 0)
       

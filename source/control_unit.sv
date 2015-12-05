@@ -311,7 +311,11 @@ module control_unit
 	    end
 	  SC:// No need
 	    begin
-	       cu_if.WEN = 0;
+	       cu_if.RegDest = 1;
+	       
+	       cu_if.MemReg = 1;
+	       
+	       cu_if.WEN = 1;
 	       // sign ext
 	       cu_if.sign_ext = 1;
 	       // alu calculates the addr for ram

@@ -140,8 +140,10 @@ module datapath (
    assign pr_if.RegDst_in_2 = cu_if.RegDest;
    assign pr_if.ALUOP_in_2 = cu_if.ALUcode;
    assign pr_if.MemtoReg_in_2 = cu_if.MemReg;
-   assign pr_if.datomic = cu_if.atomic;
+   assign dpif.datomic = pr_if.atomic_out_3;
    
+   assign pr_if.atomic_in_2 = cu_if.atomic;
+   assign pr_if.atomic_in_3 = pr_if.atomic_out_2;
    
    // Conncet register file
    assign rf_if.rsel1 = pr_if.instr_out_1[25:21];
@@ -337,6 +339,7 @@ module datapath (
    assign hiif.dREN_out_2 = pr_if.dREN_out_2;
    assign hiif.rs_in_2 = pr_if.rs_in_2;
    assign hiif.rt_in_2 = pr_if.rt_in_2;
+
    
 
 
@@ -353,6 +356,7 @@ module datapath (
       
       if (forwardA == 2'b01) begin
 	 tempA = rf_if.wdat;
+	 
       end
       if (forwardB == 2'b01) begin
 	 tempB = rf_if.wdat;

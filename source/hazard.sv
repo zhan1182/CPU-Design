@@ -23,7 +23,6 @@ module hazard(
       hiif.forwardD = 0;
       
       
-      
       // when 2nd line needs the result of 1st line, EX hazards
       if (hiif.RegWrite_out_3 && hiif.wsel_out_3 != 0 && hiif.wsel_out_3 == hiif.rs_out_2) begin
 	 hiif.forwardA = 2'b10;
@@ -47,7 +46,7 @@ module hazard(
 	 hiif.forwardD = 1;
 	 
       end
-      
+
       
       // load detection
       if (hiif.dREN_out_2 && (hiif.rt_out_2 == hiif.rs_in_2))begin
@@ -59,12 +58,15 @@ module hazard(
       else if (hiif.dREN_out_2 && (hiif.rt_out_2 == hiif.rt_in_2)) begin
 	 hiif.lwForwardB = 1;
       end
+
+
+      
       
    end // always_comb
    
    
 
-
+   
 
 
    // potential adding: P311 MEM hazard (done), P314 hazard detection: load

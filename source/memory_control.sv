@@ -14,7 +14,7 @@
 
 module memory_control (
   input CLK, nRST,
-  cache_control_if.cc ccif,
+  cache_control_if ccif,
   input logic [31:0] dmemaddr0,
   input logic [31:0] dmemaddr1
 );
@@ -35,6 +35,7 @@ module memory_control (
    // for LL & SC
    logic [1:0] LLSCchecking, LLSCinv;
    word_t [1:0] LLSCaddr;
+   
    
    typedef enum logic [2:0] {IDLE, DW1, DW2, DR1, DR2, IR, SP}coherence_state;
    coherence_state curr_state, next_state;
@@ -338,8 +339,8 @@ module memory_control (
 	ccif.iload[0] = 32'hBAD0BAD0;
 	ccif.iload[1] = 32'hBAD1BAD1;
 	
-	ccif.dload[0] = 32'hBAD0BAD0; //???????
-	ccif.dload[1] = 32'hBAD1BAD1;
+	ccif.dload[0] = (ccif.LLSCresult[0] != 2'b11) ? ccif.LLSCresult[0] : 32'hBAD0BAD0; //???????
+	ccif.dload[1] = (ccif.LLSCresult[1] != 2'b11) ? ccif.LLSCresult[1] : 32'hBAD1BAD1;
 	
 	case(curr_state)
 	  IDLE:
@@ -389,7 +390,7 @@ module memory_control (
 		 begin
 		    
 		    ccif.ramREN = 1;
-		    ccif.dload[curr_selected] = ccif.ramload;
+		    ccif.dload[curr_selected] =  ccif.ramload;
 		    if(ccif.ramstate == ACCESS)
 		      begin
 			 ccif.dwait[curr_selected] = 0;
